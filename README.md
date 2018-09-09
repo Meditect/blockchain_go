@@ -16,3 +16,7 @@ A blockchain implementation in Go, as described in these articles:
 - start up script to run a code, for each pharma company
 - API put, get, update serial numbers
 - testing
+
+## Issues:
+- REQ on serial numbers
+- assuming each pharma company run miner, full and client node?

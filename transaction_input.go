@@ -4,7 +4,7 @@ import "bytes"
 
 // TXInput represents a transaction input
 type TXInput struct {
-	Txid      []byte
+	Txid      []byte  // Txid = Tx{nil, inputs, outputs}.Hash()
 	Vout      int
 	Signature []byte
 	PubKey    []byte

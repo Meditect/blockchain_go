@@ -60,6 +60,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		return
 	}
 
+	// Check previous transactions are correct
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
 			log.Panic("ERROR: Previous transaction is not correct")
@@ -70,8 +71,11 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 
 	for inID, vin := range txCopy.Vin {
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
-		txCopy.Vin[inID].Signature = nil
-		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+		
+		//txCopy.Vin[inID].Signature = nil
+		//txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+		vin.Signature = nil
+		vin.PubKey = prevTx.Vout[vin.Vout].PubKeyHash
 
 		dataToSign := fmt.Sprintf("%x\n", txCopy)
 
@@ -134,6 +138,7 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 		return true
 	}
 
+	// Check previous transactions are correct
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
 			log.Panic("ERROR: Previous transaction is not correct")
