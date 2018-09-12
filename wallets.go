@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-const walletFile = "wallet_%s.dat"
+const walletFile = "wallet/wallet_%s.dat"
 
 // Wallets stores a collection of wallets
 type Wallets struct {

@@ -14,9 +14,49 @@ type UTXOSet struct {
 	Blockchain *Blockchain
 }
 
+type ValidOutput struct {
+	Txid 	string
+	Vout 	int
+	Index 	int //index in serialNumbers []string
+}
+
+// A revision of FindSpendableOutputs()
+func (u UTXOSet) FindValidSerialNumbers(pubKeyHash []byte, serialNumberHashes map[string]int) ([]int, []ValidOutput) {
+	var validOutputs 	[]ValidOutput
+	var invalidIndices 	[]int
+
+	db := u.Blockchain.db
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(utxoBucket))
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			txID := hex.EncodeToString(k)
+			outs := DeserializeOutputs(v)
+
+			for outIdx, out := range outs.Outputs {
+				if out.IsLockedWithKey(pubKeyHash) {
+					targetHash := string(out.SerialNumberHash[:])
+					if index, ok := serialNumberHashes[targetHash]; ok {
+						//base58 encoded txid??
+						validOutputs = append(validOutputs, ValidOutput{txID, outIdx, index})
+					}
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {log.Panic(err)}
+
+	//TODO: invalidIndices
+
+	return invalidIndices, validOutputs
+}
+
 // FindSpendableOutputs finds and returns unspent outputs to reference in inputs
-func (u UTXOSet) FindSpendableOutputs(pubkeyHash []byte, amount int) (int, map[string][]int) {
-	unspentOutputs := make(map[string][]int)
+/*func (u UTXOSet) FindSpendableOutputs(pubkeyHash []byte, amount int) (int, map[string][]int) {
+	unspentOutputs := make(map[string][]int) //txid : []Vout
 	accumulated := 0
 	db := u.Blockchain.db
 
@@ -29,13 +69,11 @@ func (u UTXOSet) FindSpendableOutputs(pubkeyHash []byte, amount int) (int, map[s
 			outs := DeserializeOutputs(v)
 
 			for outIdx, out := range outs.Outputs {
-				if out.IsLockedWithKey(pubkeyHash) && accumulated < amount {
-					accumulated += out.Value
+				if out.IsLockedWithKey(pubkeyHash) {
 					unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
 				}
 			}
 		}
-
 		return nil
 	})
 	if err != nil {
@@ -43,7 +81,7 @@ func (u UTXOSet) FindSpendableOutputs(pubkeyHash []byte, amount int) (int, map[s
 	}
 
 	return accumulated, unspentOutputs
-}
+}*/
 
 // FindUTXO finds UTXO for a public key hash
 func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
@@ -147,7 +185,7 @@ func (u UTXOSet) Update(block *Block) {
 		b := tx.Bucket([]byte(utxoBucket))
 
 		for _, tx := range block.Transactions {
-			if tx.IsCoinbase() == false {
+			if tx.IsNewSerialNumberTX() == false {
 				for _, vin := range tx.Vin {
 					updatedOuts := TXOutputs{}
 					outsBytes := b.Get(vin.Txid)

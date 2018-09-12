@@ -13,8 +13,11 @@ import (
 
 const version = byte(0x00)
 const addressChecksumLen = 4
+const addressLen = 25 // RIPEMD160 hash yields 20 bytes
+
 
 // Wallet stores private and public keys
+// One wallet per supply chain checkpoint
 type Wallet struct {
 	PrivateKey ecdsa.PrivateKey
 	PublicKey  []byte
@@ -58,6 +61,9 @@ func HashPubKey(pubKey []byte) []byte {
 // ValidateAddress check if address if valid
 func ValidateAddress(address string) bool {
 	pubKeyHash := Base58Decode([]byte(address))
+	if len(pubKeyHash) != addressLen {
+		log.Panic("Invalid address")
+	}
 	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
 	version := pubKeyHash[0]
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]

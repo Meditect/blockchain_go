@@ -12,9 +12,10 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-const dbFile = "blockchain_%s.db"
+const dbFile = "db/blockchain_%s.db"
 const blocksBucket = "blocks"
 const genesisCoinbaseData = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
+const randomSalt = "randomSalt"
 
 // Blockchain implements interactions with a DB
 type Blockchain struct {
@@ -23,6 +24,7 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain DB
+// Only the server node calls CreateBlockchain
 func CreateBlockchain(address, nodeID string) *Blockchain {
 	dbFile := fmt.Sprintf(dbFile, nodeID)
 	if dbExists(dbFile) {
@@ -32,7 +34,9 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 
 	var tip []byte
 
-	cbtx := NewCoinbaseTX(address, genesisCoinbaseData)
+	//func NewSerialNumberTX(to, serialNumber string, salt string) *Transaction
+	// Just to init the blockchain. genesisCoinbaseData won't match any serial number
+	cbtx := NewSerialNumberTX(address, genesisCoinbaseData, randomSalt)
 	genesis := NewGenesisBlock(cbtx)
 
 	db, err := bolt.Open(dbFile, 0600, nil)
@@ -46,11 +50,12 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 			log.Panic(err)
 		}
 
+		// block hash : serialized block data
 		err = b.Put(genesis.Hash, genesis.Serialize())
 		if err != nil {
 			log.Panic(err)
 		}
-
+		// "l" : hash of top block
 		err = b.Put([]byte("l"), genesis.Hash)
 		if err != nil {
 			log.Panic(err)
@@ -181,7 +186,7 @@ func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
 				UTXO[txID] = outs
 			}
 
-			if tx.IsCoinbase() == false {
+			if tx.IsNewSerialNumberTX() == false {
 				for _, in := range tx.Vin {
 					inTxID := hex.EncodeToString(in.Txid)
 					spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
@@ -334,7 +339,7 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 
 // VerifyTransaction verifies transaction input signatures
 func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
-	if tx.IsCoinbase() {
+	if tx.IsNewSerialNumberTX() {
 		return true
 	}
 

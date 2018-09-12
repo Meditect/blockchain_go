@@ -3,8 +3,28 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"crypto/sha256"
+	"math"
 	"log"
 )
+
+// Need to test this function
+func Float64ToByte(float float64) []byte {
+    bits := math.Float64bits(float)
+    bytes := make([]byte, 8)
+    binary.LittleEndian.PutUint64(bytes, bits)
+
+    return bytes
+}
+
+func HashSerialNumber(serialNumber, salt string) []byte {
+	payload := append([]byte(serialNumber), salt...)
+
+	firstSHA := sha256.Sum256(payload)
+	secondSHA := sha256.Sum256(firstSHA[:])
+
+	return secondSHA[:]
+}
 
 // IntToHex converts an int64 to a byte array
 func IntToHex(num int64) []byte {

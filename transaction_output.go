@@ -3,13 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"crypto/sha256"
 	"log"
 )
 
-// TXOutput represents a transaction output
 type TXOutput struct {
-	Value      int
-	PubKeyHash []byte
+	SerialNumberHash	[]byte  // hash(serial number + salt)
+	PubKeyHash  		[]byte  // derived from address, so it has to be hash(pubKey) of the recipient, not pubKey.
 }
 
 // Lock signs the output
@@ -24,9 +24,19 @@ func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 	return bytes.Compare(out.PubKeyHash, pubKeyHash) == 0
 }
 
+func (out *TXOutput) UpdateSerialNumberHash(serialNumber, salt string) {
+	payload := append([]byte(serialNumber), salt...)
+
+	firstSHA := sha256.Sum256(payload)
+	secondSHA := sha256.Sum256(firstSHA[:])
+
+	out.SerialNumberHash = secondSHA[:]
+}
+
 // NewTXOutput create a new TXOutput
-func NewTXOutput(value int, address string) *TXOutput {
-	txo := &TXOutput{value, nil}
+func NewTXOutput(serialNumber, address string, salt string) *TXOutput {
+	txo := &TXOutput{}
+	txo.UpdateSerialNumberHash(serialNumber, salt)
 	txo.Lock([]byte(address))
 
 	return txo
