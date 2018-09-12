@@ -169,7 +169,8 @@ func NewUTXOTransaction(wallet *Wallet, addresses, serialNumbers []string, salt 
 		serialNumberHashes[string(hash[:])] = i
 	}
 	// []int, []ValidOutput
-	invalidIndices, validOutputs := UTXOSet.FindValidSerialNumbers(pubKeyHash, serialNumberHashes)
+	//invalidIndices, validOutputs := UTXOSet.FindValidSerialNumbers(pubKeyHash, serialNumberHashes)
+	_, validOutputs := UTXOSet.FindValidSerialNumbers(pubKeyHash, serialNumberHashes)
 
 	for _, validOutput := range validOutputs {
 		// built input

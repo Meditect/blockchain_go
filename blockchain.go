@@ -106,8 +106,8 @@ func NewBlockchain(nodeID string) *Blockchain {
 func (bc *Blockchain) AddBlock(block *Block) {
 	err := bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
-		blockInDb := b.Get(block.Hash)
 
+		blockInDb := b.Get(block.Hash)
 		if blockInDb != nil {
 			return nil
 		}
@@ -122,6 +122,7 @@ func (bc *Blockchain) AddBlock(block *Block) {
 		lastBlockData := b.Get(lastHash)
 		lastBlock := DeserializeBlock(lastBlockData)
 
+		// possible that we missed blocks between block and lastBlock?
 		if block.Height > lastBlock.Height {
 			err = b.Put([]byte("l"), block.Hash)
 			if err != nil {
