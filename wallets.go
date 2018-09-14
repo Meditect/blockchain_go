@@ -49,6 +49,7 @@ func (ws *Wallets) GetAddresses() []string {
 }
 
 // GetWallet returns a Wallet by its address
+// Bad implementation from stencil code. if address does not belong to wallet, it causes nil pointer reference.
 func (ws Wallets) GetWallet(address string) Wallet {
 	return *ws.Wallets[address]
 }

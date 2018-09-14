@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"log"
+	"bytes"
 
 	"github.com/boltdb/bolt"
 )
@@ -15,11 +16,41 @@ type UTXOSet struct {
 }
 
 type ValidOutput struct {
-	Txid 	string
+	Txid 	[]byte
 	Vout 	int
 	Index 	int //index in serialNumbers []string
 }
 
+// A revision of FindSpendableOutputs()
+func (u UTXOSet) FindValidOutput(pubkeyHash []byte, targetHash []byte) *ValidOutput {
+	output := ValidOutput{}
+	db := u.Blockchain.db
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(utxoBucket))
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			txID := hex.EncodeToString(k)
+			outs := DeserializeOutputs(v)
+
+			for outIdx, out := range outs.Outputs {
+				if out.IsLockedWithKey(pubkeyHash) && bytes.Compare(out.SerialNumberHash, targetHash) == 0 {
+					output.Txid = []byte(txID)
+					output.Vout = outIdx
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return &output
+}
+
+/*
 // A revision of FindSpendableOutputs()
 func (u UTXOSet) FindValidSerialNumbers(pubKeyHash []byte, serialNumberHashes map[string]int) ([]int, []ValidOutput) {
 	var validOutputs 	[]ValidOutput
@@ -52,7 +83,7 @@ func (u UTXOSet) FindValidSerialNumbers(pubKeyHash []byte, serialNumberHashes ma
 	//TODO: invalidIndices
 
 	return invalidIndices, validOutputs
-}
+}*/
 
 // FindSpendableOutputs finds and returns unspent outputs to reference in inputs
 /*func (u UTXOSet) FindSpendableOutputs(pubkeyHash []byte, amount int) (int, map[string][]int) {
@@ -111,6 +142,33 @@ func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
 	return UTXOs
 }
 
+func (u UTXOSet) FindSerialNumberHash(hash []byte) []TXOutput {
+	var UTXOs []TXOutput
+	db := u.Blockchain.db
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(utxoBucket))
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			outs := DeserializeOutputs(v)
+
+			for _, out := range outs.Outputs {
+				if bytes.Compare(out.SerialNumberHash, hash) == 0 {
+					UTXOs = append(UTXOs, out)
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return UTXOs
+}
+
 // CountTransactions returns the number of transactions in the UTXO set
 func (u UTXOSet) CountTransactions() int {
 	db := u.Blockchain.db
@@ -139,12 +197,12 @@ func (u UTXOSet) Reindex() {
 	bucketName := []byte(utxoBucket)
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		err := tx.DeleteBucket(bucketName)
+		err := tx.DeleteBucket(bucketName) //*
 		if err != nil && err != bolt.ErrBucketNotFound {
 			log.Panic(err)
 		}
 
-		_, err = tx.CreateBucket(bucketName)
+		_, err = tx.CreateBucket(bucketName) //*
 		if err != nil {
 			log.Panic(err)
 		}
@@ -155,7 +213,7 @@ func (u UTXOSet) Reindex() {
 		log.Panic(err)
 	}
 
-	UTXO := u.Blockchain.FindUTXO()
+	UTXO := u.Blockchain.FindUTXO() //*
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)

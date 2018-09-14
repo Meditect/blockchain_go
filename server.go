@@ -363,7 +363,8 @@ func handleTx(request []byte, bc *Blockchain) {
 				return
 			}
 
-			cbTx := NewCoinbaseTX(miningAddress, "")
+			//TODO: salt parameter
+			cbTx := NewSerialNumberTX(miningAddress, "", "")
 			txs = append(txs, cbTx)
 
 			newBlock := bc.MineBlock(txs)

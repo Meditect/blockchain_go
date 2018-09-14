@@ -43,6 +43,78 @@ func NewSerialNumberTX(to, serialNumber string, salt string) *Transaction {
 	return &tx
 }
 
+// NewUTXOTransaction creates a new transaction
+func NewUTXOTransaction(wallet *Wallet, address, serialNumber string, salt string, UTXOSet *UTXOSet) *Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	pubKeyHash := HashPubKey(wallet.PublicKey)
+	serialNumberHash := HashSerialNumber(serialNumber, salt)
+
+	validOutput := *UTXOSet.FindValidOutput(pubKeyHash, serialNumberHash)
+	if validOutput.Txid == nil {
+		return nil
+	}
+
+	// built input
+	txID, err := hex.DecodeString(string(validOutput.Txid[:]))
+	if err != nil {log.Panic(err)}
+	input := TXInput{txID, validOutput.Vout, nil, wallet.PublicKey}
+	inputs = append(inputs, input)
+
+	// build output
+	// func NewTXOutput(serialNumber string, address string, salt string) *TXOutput
+	outputs = append(outputs, *NewTXOutput(serialNumber, address, salt))
+
+	tx := Transaction{nil, inputs, outputs}
+	tx.ID = tx.Hash()
+	UTXOSet.Blockchain.SignTransaction(&tx, wallet.PrivateKey)
+
+	return &tx
+}
+
+/*
+// NewUTXOTransaction creates a new transaction
+func NewUTXOTransaction(wallet *Wallet, addresses, serialNumbers []string, salt string, UTXOSet *UTXOSet) (*Transaction, []string) {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	if len(addresses) != len(serialNumbers) {
+		log.Panic("ERROR: addresses and serial numbers must pair up")
+	}
+
+	pubKeyHash := HashPubKey(wallet.PublicKey)
+	
+	var serialNumberHashes map[string]int
+	for i, serialNumber := range serialNumbers {
+		hash := HashSerialNumber(serialNumber, salt)
+		serialNumberHashes[string(hash[:])] = i
+	}
+	// []int, []ValidOutput
+	//invalidIndices, validOutputs := UTXOSet.FindValidSerialNumbers(pubKeyHash, serialNumberHashes)
+	_, validOutputs := UTXOSet.FindValidSerialNumbers(pubKeyHash, serialNumberHashes)
+
+	for _, validOutput := range validOutputs {
+		// built input
+		txID, err := hex.DecodeString(validOutput.Txid)
+		if err != nil {log.Panic(err)}
+		input := TXInput{txID, validOutput.Vout, nil, wallet.PublicKey}
+		inputs = append(inputs, input)
+
+		// build output
+		serialNumber := serialNumbers[validOutput.Index]
+		address := addresses[validOutput.Index]
+		// func NewTXOutput(serialNumber, address string, salt string) *TXOutput
+		outputs = append(outputs, *NewTXOutput(serialNumber, address, salt))
+	}
+
+	tx := Transaction{nil, inputs, outputs}
+	tx.ID = tx.Hash()
+	UTXOSet.Blockchain.SignTransaction(&tx, wallet.PrivateKey)
+
+	return &tx, nil
+}*/
+
 // Hash returns the hash of the Transaction
 func (tx *Transaction) Hash() []byte {
 	var hash [32]byte
@@ -150,47 +222,6 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 	}
 
 	return true
-}
-
-// NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(wallet *Wallet, addresses, serialNumbers []string, salt string, UTXOSet *UTXOSet) (*Transaction, []string) {
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	if len(addresses) != len(serialNumbers) {
-		log.Panic("ERROR: addresses and serial numbers must pair up")
-	}
-
-	pubKeyHash := HashPubKey(wallet.PublicKey)
-	// can []byte be map key?
-	var serialNumberHashes map[string]int
-	for i, serialNumber := range serialNumbers {
-		hash := HashSerialNumber(serialNumber, salt)
-		serialNumberHashes[string(hash[:])] = i
-	}
-	// []int, []ValidOutput
-	//invalidIndices, validOutputs := UTXOSet.FindValidSerialNumbers(pubKeyHash, serialNumberHashes)
-	_, validOutputs := UTXOSet.FindValidSerialNumbers(pubKeyHash, serialNumberHashes)
-
-	for _, validOutput := range validOutputs {
-		// built input
-		txID, err := hex.DecodeString(validOutput.Txid)
-		if err != nil {log.Panic(err)}
-		input := TXInput{txID, validOutput.Vout, nil, wallet.PublicKey}
-		inputs = append(inputs, input)
-
-		// build output
-		serialNumber := serialNumbers[validOutput.Index]
-		address := addresses[validOutput.Index]
-		// func NewTXOutput(serialNumber, address string, salt string) *TXOutput
-		outputs = append(outputs, *NewTXOutput(serialNumber, address, salt))
-	}
-
-	tx := Transaction{nil, inputs, outputs}
-	tx.ID = tx.Hash()
-	UTXOSet.Blockchain.SignTransaction(&tx, wallet.PrivateKey)
-
-	return &tx, nil
 }
 
 // String returns a human-readable representation of a transaction

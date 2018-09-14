@@ -18,8 +18,11 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  listaddresses - Lists all addresses from the wallet file")
 	fmt.Println("  printchain - Print all the blocks of the blockchain")
 	fmt.Println("  reindexutxo - Rebuilds the UTXO set")
-	fmt.Println("  send -from FROM -to TO -amount AMOUNT -mine - Send AMOUNT of coins from FROM address to TO. Mine on the same node, when -mine is set.")
-	//fmt.Println("  startnode -miner ADDRESS - Start a node with ID specified in NODE_ID env. var. -miner enables mining")
+	fmt.Println("  startnode -miner ADDRESS - Start a node with ID specified in NODE_ID env. var. -miner enables mining")
+	fmt.Println("  send -from FROM -to TO -data serialNumber -salt salt -mine - Transfer serialNumber from FROM to TO. Mine on the same node, when -mine is set.")
+	fmt.Println("  add -to TO -data serialNumber -salt salt -mine - Create a new serialNumber under address TO. Mine on the same node, when -mine is set.")
+	fmt.Println("  get -data serialNumber -salt salt - Trace the serial number.")
+	fmt.Println("  help - Print usage.")
 }
 
 func (cli *CLI) validateArgs() {
@@ -45,17 +48,28 @@ func (cli *CLI) Run() {
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 	reindexUTXOCmd := flag.NewFlagSet("reindexutxo", flag.ExitOnError)
 	sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
-	/*startNodeCmd := flag.NewFlagSet("startnode", flag.ExitOnError)*/
+	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
+	getCmd := flag.NewFlagSet("get", flag.ExitOnError)
+	startNodeCmd := flag.NewFlagSet("startnode", flag.ExitOnError)
 
 	createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
+	
 	sendFrom := sendCmd.String("from", "", "Source wallet address")
 	sendTo := sendCmd.String("to", "", "Destination wallet address")
-	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
 	sendMine := sendCmd.Bool("mine", false, "Mine immediately on the same node")
-	serialNumber := sendCmd.String("data", "", "The serial number to send")
-	salt := sendCmd.String("salt", "", "The salt")
-	/*startNodeMiner := startNodeCmd.String("miner", "", "Enable mining mode and send reward to ADDRESS")
-	*/
+	sendData := sendCmd.String("data", "", "The serial number to send")
+	sendSalt := sendCmd.String("salt", "", "The salt")
+
+	addTo := addCmd.String("to", "", "Destination wallet address")
+	addData := addCmd.String("data", "", "The serial number to create")
+	addSalt := addCmd.String("salt", "", "The salt")
+	addMine := addCmd.Bool("mine", false, "Mine immediately on the same node")
+
+	getSerialNumber := getCmd.String("data", "", "The serial number to query")
+	getSalt := getCmd.String("salt", "", "The salt")
+
+	startNodeMiner := startNodeCmd.String("miner", "", "Enable mining mode and send reward to ADDRESS")
+	
 	switch os.Args[1] {
 
 	case "createblockchain":
@@ -88,11 +102,21 @@ func (cli *CLI) Run() {
 		if err != nil {
 			log.Panic(err)
 		}
-	/*case "startnode":
+	case "add":
+		err := addCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panic(err)
+		}
+	case "get":
+		err := getCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panic(err)
+		}
+	case "startnode":
 		err := startNodeCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Panic(err)
-		}*/
+		}
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -123,20 +147,36 @@ func (cli *CLI) Run() {
 	}
 
 	if sendCmd.Parsed() {
-		if *sendFrom == "" || *sendTo == "" || *serialNumber == "" || *salt == "" {
+		if *sendFrom == "" || *sendTo == "" || *sendData == "" || *sendSalt == "" {
 			sendCmd.Usage()
 			os.Exit(1)
 		}
-
-		cli.send(*sendFrom, *sendTo, *serialNumber, *salt, nodeID, *sendMine)
+		cli.send(*sendFrom, *sendTo, *sendData, *sendSalt, nodeID, *sendMine)
 	}
 
-	/*if startNodeCmd.Parsed() {
+	if addCmd.Parsed() {
+		if *addTo == "" || *addData == "" || *addSalt == "" {
+			addCmd.Usage()
+			os.Exit(1)
+		}
+
+		cli.createNewSerialNumber(*addTo, *addData, *addSalt, nodeID, *addMine)
+	}
+
+	if getCmd.Parsed() {
+		if *getSerialNumber == "" || *getSalt == "" {
+			getCmd.Usage()
+			os.Exit(1)
+		}
+		cli.getSerialNumber(*getSerialNumber, *getSalt, nodeID)
+	}
+
+	if startNodeCmd.Parsed() {
 		nodeID := os.Getenv("NODE_ID")
 		if nodeID == "" {
 			startNodeCmd.Usage()
 			os.Exit(1)
 		}
 		cli.startNode(nodeID, *startNodeMiner)
-	}*/
+	}
 }

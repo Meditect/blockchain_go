@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-func (cli *CLI) send(from, to string, serialNumber, salt string, nodeID string, mineNow bool) {
+func (cli *CLI) send(from string, to, serialNumber string, salt, nodeID string, mineNow bool) {
 	if !ValidateAddress(from) {
 		log.Panic("ERROR: Sender address is not valid")
 	}
@@ -24,14 +24,15 @@ func (cli *CLI) send(from, to string, serialNumber, salt string, nodeID string, 
 
 	wallet := wallets.GetWallet(from)
 
+	// later may be modified to transfer labels in patch
 	// func NewUTXOTransaction(wallet *Wallet, addresses, serialNumbers []string, 
 	//             salt string, UTXOSet *UTXOSet) (*Transaction, []string)
-	tx, _ := NewUTXOTransaction(&wallet, to, serialNumber, salt, &UTXOSet)
+	//to_array := []string{"a", "b"}
+	//serialNumber_array := []string{"c", "d"}
+	tx := NewUTXOTransaction(&wallet, to, serialNumber, salt, &UTXOSet)
 
 	if mineNow {
-		cbTx := NewSerialNumberTX(from, "")
-		txs := []*Transaction{cbTx, tx}
-
+		txs := []*Transaction{tx}
 		newBlock := bc.MineBlock(txs)
 		UTXOSet.Update(newBlock)
 	} else {
@@ -40,3 +41,15 @@ func (cli *CLI) send(from, to string, serialNumber, salt string, nodeID string, 
 
 	fmt.Println("Success!")
 }
+
+/*
+func jsonToArray(json string, flag, string) []string {
+	if flag == "to" {
+
+	}
+	if flag == "serialNumber" {
+
+	}
+}*/
+
+

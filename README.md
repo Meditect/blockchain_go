@@ -1,4 +1,4 @@
-# forked from jiewan/blockchain_go
+# forked from jeiwan/blockchain_go
 
 ## TODO:
 - built the distributed network part
@@ -36,27 +36,6 @@ Add serial number : coinbase transaction
 Get serial number : GetSerialNumber(address) -> []SerialNumbers
 Trace serial number : SerialNumber -> []address
 Update location : transaction
-
-
-type Transaction struct {
-    id
-    Input
-    Output
-}
-
-type Input struct {
-    reference_to_previous_output
-    signature
-    // hash(serial number + salt1) + hash(location1 + salt1)
-    pubKey of checkpoint1
-}
-
-type Output struct {
-    hash(serial number + salt2)
-    hash(location2 + salt2)
-    pubKey of checkpoint2
-}
-
 
 
 

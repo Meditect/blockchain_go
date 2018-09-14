@@ -75,6 +75,7 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 
 // NewBlockchain creates a new Blockchain with genesis Block
 func NewBlockchain(nodeID string) *Blockchain {
+	fmt.Println("new bc func")
 	dbFile := fmt.Sprintf(dbFile, nodeID)
 	if dbExists(dbFile) == false {
 		fmt.Println("No existing blockchain found. Create one first.")
@@ -86,7 +87,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 	if err != nil {
 		log.Panic(err)
 	}
-
+	fmt.Println("db opened")
 	err = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		tip = b.Get([]byte("l"))
@@ -96,7 +97,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 	if err != nil {
 		log.Panic(err)
 	}
-
+	fmt.Println("db updated")
 	bc := Blockchain{tip, db}
 
 	return &bc
