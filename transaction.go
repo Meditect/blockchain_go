@@ -44,7 +44,7 @@ func NewSerialNumberTX(to, serialNumber string, salt string) *Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(wallet *Wallet, address, serialNumber string, salt string, UTXOSet *UTXOSet) *Transaction {
+func NewUTXOTransaction(wallet *Wallet, address, serialNumber string, salt string, UTXOSet *UTXOSet) (*Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 
@@ -53,7 +53,7 @@ func NewUTXOTransaction(wallet *Wallet, address, serialNumber string, salt strin
 
 	validOutput := *UTXOSet.FindValidOutput(pubKeyHash, serialNumberHash)
 	if validOutput.Txid == nil {
-		return nil
+		return nil, fmt.Errorf("No valid output found. Make sure serial number and salt are correct.")
 	}
 
 	// built input
@@ -70,7 +70,7 @@ func NewUTXOTransaction(wallet *Wallet, address, serialNumber string, salt strin
 	tx.ID = tx.Hash()
 	UTXOSet.Blockchain.SignTransaction(&tx, wallet.PrivateKey)
 
-	return &tx
+	return &tx, nil
 }
 
 /*

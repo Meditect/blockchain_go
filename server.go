@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
+	"sync"
 )
 
 const protocol = "tcp"
@@ -17,6 +19,7 @@ const commandLength = 12
 
 var nodeAddress string
 var miningAddress string
+var apiAddress string
 var knownNodes = []string{"localhost:3000"}
 var blocksInTransit = [][]byte{}
 var mempool = make(map[string]Transaction)
@@ -61,11 +64,8 @@ type verzion struct {
 func StartServer(nodeID, minerAddress string) {
 	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
 	miningAddress = minerAddress
-	listener, err := net.Listen(protocol, nodeAddress)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer listener.Close()
+	apiAddress = fmt.Sprintf("localhost:%s", "2000")
+	var wg sync.WaitGroup
 
 	bc := NewBlockchain(nodeID)
 
@@ -74,6 +74,22 @@ func StartServer(nodeID, minerAddress string) {
 		sendVersion(knownNodes[0], bc)
 	}
 
+	wg.Add(1)
+	go launchHTTPListener(apiAddress, bc)
+	wg.Add(1)
+	go launchTCPListener(nodeAddress, bc)
+	
+	wg.Wait()
+}
+
+func launchTCPListener(nodeAddress string, bc *Blockchain) {
+	listener, err := net.Listen(protocol, nodeAddress)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer listener.Close()
+
+	
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -81,6 +97,24 @@ func StartServer(nodeID, minerAddress string) {
 		}
 		go handleConnection(conn, bc)
 	}
+}
+
+func launchHTTPListener(apiAddress string, bc *Blockchain) {
+	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("HTTP request received.")
+		fmt.Fprintf(w, "Hello, %s", r.URL.Path)
+	})
+
+	log.Fatal(http.ListenAndServe(":2000", nil))
+	
+	/*s := &http.Server{
+		Addr:           ":8080",
+		Handler:        httpHandler,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+	log.Fatal(s.ListenAndServe())*/
 }
 
 func commandToBytes(command string) []byte {
@@ -418,10 +452,14 @@ func handleVersion(request []byte, bc *Blockchain) {
 }
 
 func handleConnection(conn net.Conn, bc *Blockchain) {
+
 	request, err := ioutil.ReadAll(conn)
+	//request := make([]byte, 2048)
+	//_, err := conn.Read(request)
 	if err != nil {
 		log.Panic(err)
 	}
+
 	command := bytesToCommand(request[:commandLength])
 	fmt.Printf("Received %s command\n", command)
 

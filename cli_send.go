@@ -29,7 +29,12 @@ func (cli *CLI) send(from string, to, serialNumber string, salt, nodeID string, 
 	//             salt string, UTXOSet *UTXOSet) (*Transaction, []string)
 	//to_array := []string{"a", "b"}
 	//serialNumber_array := []string{"c", "d"}
-	tx := NewUTXOTransaction(&wallet, to, serialNumber, salt, &UTXOSet)
+	tx, err := NewUTXOTransaction(&wallet, to, serialNumber, salt, &UTXOSet)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	if mineNow {
 		txs := []*Transaction{tx}
