@@ -1,9 +1,12 @@
-# forked from jeiwan/blockchain_go
+blockchain tracking serial numbers
 
 WARNING:
-- hardcoded GO_PATH into scripts, which needs be changed
+- hardcoded GO_PATH in scripts, which need be changed
 - need more robust input error checking
 - should have directories named "db" and "wallet" in the GO_PATH directory
+
+#Summary
+Coming soon
 
 # Server node script:
 ```bash
@@ -11,13 +14,14 @@ WARNING:
 > ./server.sh localhost 3000 localhost 2000
 ```
 
-Server accepts API calls to query the blockchain:
+GET API on server:
 get(serialnumber, salt) -> txid, PubKeyFrom, PubKeyHash
 ```bash
 > curl --header "Content-Type: application/json" --request POST --data '{"serialnumber":"1234567890","salt":"salt"}' http://localhost:2000/get
 
 {"Txid":null,"PubKeyFrom":null,"PubKeyHash":"QGApgHsaRW1opYwlZ15NBm0UYSw="}
 ```
+
 
 # Client node script:
 ```bash
@@ -30,49 +34,37 @@ The script takes client into a command line interface to:
 - introduce a new serial number into blockchain
 ```bash
 # add to_addr serialnumber salt
-> add 
+> add 137kzApkdZDFyZZtWfqwZrx2i5UU1QFtgp 1234567890 1234
+Success! or error message
 ```
+Generate serial number 1234567890 with salt 1234 and assign to a party who owns pubkey 137kzApkdZDFyZZtWfqwZrx2i5UU1QFtgp
 
 - update a serial number
 ```bash
 # send from_addr to_addr serialnumber salt
-> send 
+> send 137kzApkdZDFyZZtWfqwZrx2i5UU1QFtgp 15x5wsioY6ainZ83hQu1RMLWBew1xZF7g5 1234567890 1234
+Success! or error message
 ```
+Send serial number 1234567890 with salt 1234 from 137kzApkdZDFyZZtWfqwZrx2i5UU1QFtgp to another address 15x5wsioY6ainZ83hQu1RMLWBew1xZF7g5
 
 - get info about a serial number
 ```bash
 # get serialnumber salt
-> 
+> get 1234567890 1234
+
+```
+
+- print the blockchain
+```bash
+# print the whole blockchain
+# TODO: print the latest n blocks
+> print
 ```
 
 # Miner node script:
 ```bash
 # script Node_IP Node_Port Miner_PubKey
-> ./miner.sh localhost 2999 xxxxxxxxx
+> ./miner.sh localhost 2999
 ```
-
-
-
-
-Add serial number : coinbase transaction
-Get serial number : GetSerialNumber(address) -> []SerialNumbers
-Trace serial number : SerialNumber -> []address
-Update location : transaction
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

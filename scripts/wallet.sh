@@ -14,7 +14,7 @@ WALLET_FILE=wallet/wallet_${NODE_ID}.dat
 RUN=bin/bcg
 
 if ! [ -e $DB_FILE ]; then
-	addr="$($RUN createwallet)"
+	addr=$($RUN createwallet)
 	addr=${addr#Your new address: } #changing fmt.Printf string in source code will break this line
 	echo "Your new address: " $addr
 	#copy the genesis block before downloading blocks from server node

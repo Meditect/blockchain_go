@@ -11,10 +11,9 @@ DB_FILE=db/blockchain_${NODE_ID}.db
 WALLET_FILE=wallet/wallet_${NODE_ID}.dat
 
 RUN=bin/bcg
-addr=$3
 
 if ! [ -e DB_FILE ]; then
-	addr="$($RUN createwallet)"
+	addr=$($RUN createwallet)
 	addr=${addr#Your new address: } #changing fmt.Printf string in source code will break this line
 	echo "Your new address: " $addr
 	#copy the genesis block before downloading blocks from server node
@@ -22,7 +21,9 @@ if ! [ -e DB_FILE ]; then
 
 fi
 
-echo "Mining on node: " $NODE_ADDR
-echo "Mining address: " $addr
+addr=$($RUN listaddresses)
+
+#echo "Mining on node: " $NODE_ADDR
+#echo "Mining address: " $addr
 
 $RUN startnode -miner $addr

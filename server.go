@@ -119,13 +119,8 @@ func launchClientInterface(bc *Blockchain) {
 			continue
 		}
 
-		//only for testing
-		mineNow := false
-		if os.Getenv("MINE") != "" {
-			mineNow = true
-		}
+		mineNow = false
 
-		//command := bytesToCommand(sentence[:commandLength])
 		line := strings.TrimSuffix(string(sentence), "\n")
 		args := strings.Split(line, " ")
 
@@ -134,19 +129,16 @@ func launchClientInterface(bc *Blockchain) {
 
 		switch args[0] {
 		case "add":
-			//func clientAddHandler(to string, serialNumber, salt string, bc *Blockchain, mineNow bool)
 			to := args[1]
 			data := args[2]
 			salt := args[3]
 			clientAddHandler(to, data, salt, bc, mineNow)
 			
 		case "get":
-			//func clientGetHandler(serialNumber, salt string, bc *Blockchain)
 			data := args[1]
 			salt := args[2]
 			clientGetHandler(data, salt, bc)
 		case "send":
-			//func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchain, mineNow bool)
 			from := args[1]
 			to := args[2]
 			data := args[3]
