@@ -1,8 +1,12 @@
 #!/bin/bash
 
-#This should get the server node up running.
+# script Node_IP Node_Port API_IP API_Port
+# ./server.sh localhost 3000 localhost 2000
 export GO_PATH=/Users/qiheng/Documents/blockchain_go/
-export NODE_ID=$1
+export NODE_ADDR=$1:$2
+export NODE_ID=$2
+export API_ADDR=$3:$4
+
 cd $GO_PATH
 DB_FILE=db/blockchain_${NODE_ID}.db
 WALLET_FILE=wallet/wallet_${NODE_ID}.dat
@@ -11,12 +15,13 @@ pwd
 RUN=bin/bcg
 
 if ! [ -e $DB_FILE ]; then
-	echo "Init server db once forever."
+	echo "Init server db for new node"
 	addr=$($RUN createwallet)
 	addr=${addr#Your new address: } #changing fmt.Printf string in source code will break this line
 	$RUN createblockchain -address $addr
+	cp $DB_FILE db/genesis_block.db
 fi
 
-echo "Address: " $($RUN listaddresses)
+echo "Server Address: " $($RUN listaddresses)
 
 $RUN startnode

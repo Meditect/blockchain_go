@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"crypto/sha256"
 	"math"
+	"strings"
 	"log"
 )
 
@@ -15,6 +16,23 @@ func Float64ToByte(float float64) []byte {
     binary.LittleEndian.PutUint64(bytes, bits)
 
     return bytes
+}
+
+func ParseNodeID(nodeAddress string) string {
+	a := strings.Split(nodeAddress, ":")
+	if len(a) != 2 {
+		log.Panic("Invalid nodeAddr %s", nodeAddress)
+	}
+	return a[1]
+}
+
+func SliceContainsString(list []string, str string) bool {
+ 	for _, v := range list {
+ 		if strings.Compare(str, v) == 0 {
+ 			return true
+ 		}
+ 	}
+ 	return false
 }
 
 func HashSerialNumber(serialNumber, salt string) []byte {

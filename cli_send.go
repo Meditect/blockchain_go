@@ -25,10 +25,6 @@ func (cli *CLI) send(from string, to, serialNumber string, salt, nodeID string, 
 	wallet := wallets.GetWallet(from)
 
 	// later may be modified to transfer labels in patch
-	// func NewUTXOTransaction(wallet *Wallet, addresses, serialNumbers []string, 
-	//             salt string, UTXOSet *UTXOSet) (*Transaction, []string)
-	//to_array := []string{"a", "b"}
-	//serialNumber_array := []string{"c", "d"}
 	tx, err := NewUTXOTransaction(&wallet, to, serialNumber, salt, &UTXOSet)
 
 	if err != nil {
@@ -44,17 +40,6 @@ func (cli *CLI) send(from string, to, serialNumber string, salt, nodeID string, 
 		sendTx(knownNodes[0], tx)
 	}
 
-	fmt.Println("Success!")
 }
-
-/*
-func jsonToArray(json string, flag, string) []string {
-	if flag == "to" {
-
-	}
-	if flag == "serialNumber" {
-
-	}
-}*/
 
 

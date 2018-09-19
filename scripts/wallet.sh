@@ -1,13 +1,17 @@
 #!/bin/bash
 
+# script Node_IP Node_Port
+# ./wallet.sh localhost 3001
 export GO_PATH=/Users/qiheng/Documents/blockchain_go/
-export NODE_ID=$1
-echo "Running on NODE_ID: " $NODE_ID
+export NODE_ADDR=$1:$2
+export NODE_ID=$2
+
 cd $GO_PATH
 DB_FILE=db/blockchain_${NODE_ID}.db
 WALLET_FILE=wallet/wallet_${NODE_ID}.dat
 
-RUN=$GO_PATH"/bin/bcg"
+
+RUN=bin/bcg
 
 if ! [ -e $DB_FILE ]; then
 	addr="$($RUN createwallet)"

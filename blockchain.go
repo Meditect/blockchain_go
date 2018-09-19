@@ -75,7 +75,6 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 
 // NewBlockchain creates a new Blockchain with genesis Block
 func NewBlockchain(nodeID string) *Blockchain {
-	fmt.Println("new bc func")
 	dbFile := fmt.Sprintf(dbFile, nodeID)
 	if dbExists(dbFile) == false {
 		fmt.Println("No existing blockchain found. Create one first.")
@@ -87,7 +86,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 	if err != nil {
 		log.Panic(err)
 	}
-	fmt.Println("db opened")
+
 	err = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		tip = b.Get([]byte("l"))
@@ -97,7 +96,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 	if err != nil {
 		log.Panic(err)
 	}
-	fmt.Println("db updated")
+
 	bc := Blockchain{tip, db}
 
 	return &bc
@@ -158,6 +157,33 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	}
 
 	return Transaction{}, errors.New("Transaction is not found")
+}
+
+func (bc *Blockchain) FindSerialNumberHash(hash []byte) []TXOutput {
+	var UTXOs []TXOutput
+	db := bc.db
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(utxoBucket))
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			outs := DeserializeOutputs(v)
+
+			for _, out := range outs.Outputs {
+				if bytes.Compare(out.SerialNumberHash, hash) == 0 {
+					UTXOs = append(UTXOs, out)
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return UTXOs
 }
 
 // FindUTXO finds all unspent transaction outputs and returns transactions with spent outputs removed

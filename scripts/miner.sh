@@ -1,20 +1,28 @@
 #!/bin/bash
 
+# script Node_IP Node_Port Miner_PubKey
+# ./miner.sh localhost 2999 xxxxxxxxx
 export GO_PATH=/Users/qiheng/Documents/blockchain_go
-export NODE_ID=$1
-echo "NODE_ID: " $NODE_ID
+export NODE_ADDR=$1:$2
+export NODE_ID=$2
+
 cd $GO_PATH
 DB_FILE=db/blockchain_${NODE_ID}.db
 WALLET_FILE=wallet/wallet_${NODE_ID}.dat
 
-RUN=$GO_PATH"/bin/bcg"
-
+RUN=bin/bcg
+addr=$3
 
 if ! [ -e DB_FILE ]; then
 	addr="$($RUN createwallet)"
-	addr=${addr#Your new address: }
+	addr=${addr#Your new address: } #changing fmt.Printf string in source code will break this line
 	echo "Your new address: " $addr
-	cp db/blockchain_3000.db $DB_FILE
+	#copy the genesis block before downloading blocks from server node
+	cp db/genesis_block.db $DB_FILE
+
 fi
+
+echo "Mining on node: " $NODE_ADDR
+echo "Mining address: " $addr
 
 $RUN startnode -miner $addr

@@ -1,35 +1,48 @@
 # forked from jeiwan/blockchain_go
 
-## TODO:
-- built the distributed network part
-- start up script to run a code, for each pharma company
-- API put, get, update serial numbers
-- testing
+WARNING:
+- hardcoded GO_PATH into scripts, which needs be changed
+- need more robust input error checking
+- should have directories named "db" and "wallet" in the GO_PATH directory
 
-## Issues:
-- REQ on serial numbers
-- assuming each pharma company run miner, full and client node?
+# Server node script:
+> script Node_IP Node_Port API_IP API_Port
+> ./server.sh localhost 3000 localhost 2000
+
+Server accepts API calls to query the blockchain:
+get(serialnumber, salt) -> txid, PubKeyFrom, PubKeyHash
+
+Example:
+> curl --header "Content-Type: application/json" --request POST --data '{"serialnumber":"1234567890","salt":"salt"}' http://localhost:2000/get
+
+{"Txid":null,"PubKeyFrom":null,"PubKeyHash":"QGApgHsaRW1opYwlZ15NBm0UYSw="}
+
+# Client node script:
+> script Node_IP Node_Port
+> ./wallet.sh localhost 3001
+
+The script takes client into a command line interface to:
+
+- introduce a new serial number into blockchain
+> add to serialnumber salt
+> add 
 
 
-Monday:
-wallet.go
-wallets.go
-transaction.go
-transaction_input.go
-transaction_output.go
+- update a serial number
+> send from to serialnumber salt
+> send 
 
-Tuesday:
-block.go
-blockchain.go
-cli.go
-cli_*.go
-proofofwork.go
-utxo_set.go
+- get info about a serial number
+> get serialnumber salt
+> 
 
-Wednesday:
-server.go
-startup.sh
-APIs
+
+# Miner node script:
+> script Node_IP Node_Port Miner_PubKey
+> ./miner.sh localhost 2999 xxxxxxxxx
+
+
+
 
 
 Add serial number : coinbase transaction

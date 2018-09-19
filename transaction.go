@@ -15,7 +15,7 @@ import (
 	"log"
 )
 
-const coinbaseInputData = "coinbase"
+//const coinbaseInputData = "coinbase"
 
 // Transaction represents a Bitcoin transaction
 type Transaction struct {

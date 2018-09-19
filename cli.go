@@ -172,11 +172,12 @@ func (cli *CLI) Run() {
 	}
 
 	if startNodeCmd.Parsed() {
-		nodeID := os.Getenv("NODE_ID")
-		if nodeID == "" {
+		nodeAddress := os.Getenv("NODE_ADDR")
+		apiAddress := os.Getenv("API_ADDR")
+		if nodeAddress == "" {
 			startNodeCmd.Usage()
 			os.Exit(1)
 		}
-		cli.startNode(nodeID, *startNodeMiner)
+		cli.startNode(nodeAddress, *startNodeMiner, apiAddress)
 	}
 }

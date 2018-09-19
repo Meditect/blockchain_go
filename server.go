@@ -11,6 +11,11 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"encoding/json"
+	"bufio"
+	"os"
+	"strings"
+	"strconv"
 )
 
 const protocol = "tcp"
@@ -19,8 +24,7 @@ const commandLength = 12
 
 var nodeAddress string
 var miningAddress string
-var apiAddress string
-var knownNodes = []string{"localhost:3000"}
+var knownNodes = []string{"localhost:3000"} //knownNodes will be hardcoded 
 var blocksInTransit = [][]byte{}
 var mempool = make(map[string]Transaction)
 
@@ -60,26 +64,100 @@ type verzion struct {
 	AddrFrom   string
 }
 
-// StartServer starts a node
-func StartServer(nodeID, minerAddress string) {
-	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
-	miningAddress = minerAddress
-	apiAddress = fmt.Sprintf("localhost:%s", "2000")
-	var wg sync.WaitGroup
+type getJSONReq struct {
+	SerialNumber string `json:"serialnumber"`
+	Salt 		 string `json:"salt"`
+}
 
+type getJSONResp struct {
+	Txid 		string
+	PubKeyFrom 	string
+	PubKeyHash 	string
+}
+
+//{"Txid":null,"PubKeyFrom":null,"PubKeyHash":"QGApgHsaRW1opYwlZ15NBm0UYSw="}
+//{"Txid":"","PubKeyFrom":"","PubKeyHash":"406029807b1a456d68a58c25675e4d066d14612c"}
+
+/* 	client node: address, "", ""
+	miner node:	 address, "", apiAddress
+	server node: address, minerAddress, "" where address = minerAddress
+*/
+
+func StartServer(address string, minerAddress, apiAddress string) {
+	nodeID := ParseNodeID(address)
+	nodeAddress = address
+	miningAddress = minerAddress
 	bc := NewBlockchain(nodeID)
 
-	// check in with server node
-	if nodeAddress != knownNodes[0] {
-		sendVersion(knownNodes[0], bc)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go launchTCPListener(nodeAddress, bc) //node communication
+
+	// if server, launch API listener
+	if SliceContainsString(knownNodes, nodeAddress) {
+		wg.Add(1)
+		go launchHTTPListener(apiAddress, bc)
+	} else {
+		//if not, check in with server node. Default to the first server
+		sendVersion(knownNodes[0], bc) 
 	}
 
-	wg.Add(1)
-	go launchHTTPListener(apiAddress, bc)
-	wg.Add(1)
-	go launchTCPListener(nodeAddress, bc)
-	
+	if minerAddress == "" && apiAddress == "" {
+		launchClientInterface(bc)
+	}
+
 	wg.Wait()
+}
+
+func launchClientInterface(bc *Blockchain) {
+	buf := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("> ")
+		sentence, err := buf.ReadBytes('\n')
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		//only for testing
+		mineNow := false
+		if os.Getenv("MINE") != "" {
+			mineNow = true
+		}
+
+		//command := bytesToCommand(sentence[:commandLength])
+		line := strings.TrimSuffix(string(sentence), "\n")
+		args := strings.Split(line, " ")
+
+		//TODO: error checking
+		fmt.Printf("Received %s command\n", args[0])
+
+		switch args[0] {
+		case "add":
+			//func clientAddHandler(to string, serialNumber, salt string, bc *Blockchain, mineNow bool)
+			to := args[1]
+			data := args[2]
+			salt := args[3]
+			clientAddHandler(to, data, salt, bc, mineNow)
+			
+		case "get":
+			//func clientGetHandler(serialNumber, salt string, bc *Blockchain)
+			data := args[1]
+			salt := args[2]
+			clientGetHandler(data, salt, bc)
+		case "send":
+			//func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchain, mineNow bool)
+			from := args[1]
+			to := args[2]
+			data := args[3]
+			salt := args[4]
+			clientSendHandler(from, to, data, salt, bc, mineNow)
+		case "print":
+			clientPrintHandler(bc)
+		default:
+			fmt.Println("Unknown command!")
+		}
+	}
 }
 
 func launchTCPListener(nodeAddress string, bc *Blockchain) {
@@ -89,7 +167,6 @@ func launchTCPListener(nodeAddress string, bc *Blockchain) {
 	}
 	defer listener.Close()
 
-	
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -99,22 +176,132 @@ func launchTCPListener(nodeAddress string, bc *Blockchain) {
 	}
 }
 
+
 func launchHTTPListener(apiAddress string, bc *Blockchain) {
+	//serial number, salt -> txid, from pubkey, to pubkey hash
 	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("HTTP request received.")
-		fmt.Fprintf(w, "Hello, %s", r.URL.Path)
+		req := getJSONReq{}
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != io.EOF && err != nil {
+			panic(err)
+		}
+		fmt.Println(req)
+		resp := getJSONResp{}
+
+		hash := HashSerialNumber(req.SerialNumber, req.Salt)
+		outputs := bc.FindSerialNumberHash(hash)
+		if len(outputs) > 0 {
+			resp.PubKeyHash = fmt.Sprintf("%x", outputs[0].PubKeyHash)
+		}
+		fmt.Println(resp)
+		respJson, err := json.Marshal(resp)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(respJson)
 	})
 
-	log.Fatal(http.ListenAndServe(":2000", nil))
+	log.Fatal(http.ListenAndServe(apiAddress, nil))
 	
 	/*s := &http.Server{
-		Addr:           ":8080",
-		Handler:        httpHandler,
+		Addr:           apiAddress
+		Handler:        handler_name,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 	log.Fatal(s.ListenAndServe())*/
+}
+
+func clientAddHandler(to string, serialNumber, salt string, bc *Blockchain, mineNow bool) {
+	if !ValidateAddress(to) {
+		log.Panic("ERROR: Recipient address is not valid")
+	}
+
+	tx := NewSerialNumberTX(to, serialNumber, salt)
+
+	if mineNow {
+		UTXOSet := UTXOSet{bc}
+		txs := []*Transaction{tx}
+		newBlock := bc.MineBlock(txs)
+		UTXOSet.Update(newBlock)
+	} else {
+		sendTx(knownNodes[0], tx)
+	}
+
+	fmt.Println("Success!")
+}
+
+func clientGetHandler(serialNumber, salt string, bc *Blockchain) {
+	UTXOSet := UTXOSet{bc}
+
+	hash := HashSerialNumber(serialNumber, salt)
+
+	outputs := UTXOSet.FindSerialNumberHash(hash)
+	
+	for _, output := range outputs {
+		fmt.Printf("============ Tx %x ============\n")
+		fmt.Printf("Serial Number Hash: %d\n", output.SerialNumberHash)
+		fmt.Printf("Prev. block: %x\n", output.PubKeyHash)
+		fmt.Printf("\n")
+	}
+}
+
+func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchain, mineNow bool) {
+	if !ValidateAddress(from) {
+		log.Panic("ERROR: Sender address is not valid")
+	}
+	if !ValidateAddress(to) {
+		log.Panic("ERROR: Recipient address is not valid")
+	}
+
+	UTXOSet := UTXOSet{bc}
+
+	wallets, err := NewWallets(ParseNodeID(nodeAddress))
+	if err != nil {
+		log.Panic(err)
+	}
+
+	wallet := wallets.GetWallet(from)
+
+	// later may be modified to transfer labels in patch
+	tx, err := NewUTXOTransaction(&wallet, to, serialNumber, salt, &UTXOSet)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if mineNow {
+		txs := []*Transaction{tx}
+		newBlock := bc.MineBlock(txs)
+		UTXOSet.Update(newBlock)
+	} else {
+		sendTx(knownNodes[0], tx)
+	}
+
+	fmt.Println("Success!")
+}
+
+func clientPrintHandler(bc *Blockchain) {
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		fmt.Printf("============ Block %x ============\n", block.Hash)
+		fmt.Printf("Height: %d\n", block.Height)
+		fmt.Printf("Prev. block: %x\n", block.PrevBlockHash)
+		pow := NewProofOfWork(block)
+		fmt.Printf("PoW: %s\n\n", strconv.FormatBool(pow.Validate()))
+		for _, tx := range block.Transactions {
+			fmt.Println(tx)
+		}
+		fmt.Printf("\n\n")
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
 }
 
 func commandToBytes(command string) []byte {
@@ -481,7 +668,6 @@ func handleConnection(conn net.Conn, bc *Blockchain) {
 	default:
 		fmt.Println("Unknown command!")
 	}
-
 	conn.Close()
 }
 
