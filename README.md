@@ -6,41 +6,50 @@ WARNING:
 - should have directories named "db" and "wallet" in the GO_PATH directory
 
 # Server node script:
-> script Node_IP Node_Port API_IP API_Port
+```bash
+# script Node_IP Node_Port API_IP API_Port
 > ./server.sh localhost 3000 localhost 2000
+```
 
 Server accepts API calls to query the blockchain:
 get(serialnumber, salt) -> txid, PubKeyFrom, PubKeyHash
-
-Example:
+```bash
 > curl --header "Content-Type: application/json" --request POST --data '{"serialnumber":"1234567890","salt":"salt"}' http://localhost:2000/get
 
 {"Txid":null,"PubKeyFrom":null,"PubKeyHash":"QGApgHsaRW1opYwlZ15NBm0UYSw="}
+```
 
 # Client node script:
-> script Node_IP Node_Port
+```bash
+# script Node_IP Node_Port
 > ./wallet.sh localhost 3001
+```
 
 The script takes client into a command line interface to:
 
 - introduce a new serial number into blockchain
-> add to serialnumber salt
+```bash
+# add to_addr serialnumber salt
 > add 
-
+```
 
 - update a serial number
-> send from to serialnumber salt
+```bash
+# send from_addr to_addr serialnumber salt
 > send 
+```
 
 - get info about a serial number
-> get serialnumber salt
+```bash
+# get serialnumber salt
 > 
-
+```
 
 # Miner node script:
-> script Node_IP Node_Port Miner_PubKey
+```bash
+# script Node_IP Node_Port Miner_PubKey
 > ./miner.sh localhost 2999 xxxxxxxxx
-
+```
 
 
 
