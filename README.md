@@ -3,8 +3,7 @@
 WARNING:
 - Hardcoded GO_PATH in scripts. Change it before running.
 
-#Setup
-From GO_PATH directory, run:
+Setup from GO_PATH directory, run:
 ```bash
 go get github.com/qihengchen/bcg/...
 go get github.com/boltdb/bolt/...
