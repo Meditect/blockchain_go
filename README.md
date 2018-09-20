@@ -29,6 +29,13 @@ get(serialnumber, salt) -> txid, PubKeyFrom, PubKeyHash
 ```
 
 
+# Miner node script:
+```bash
+# script Node_IP Node_Port Miner_PubKey
+> ./miner.sh localhost 2999
+```
+
+
 # Client node script:
 ```bash
 # script Node_IP Node_Port
@@ -69,11 +76,4 @@ Script (PubKey hash of recipient): 5b7a1be33dcba30823e3fe51778ba274cadb7dd5
 # TODO: print the latest n blocks
 > print
 ```
-
-# Miner node script:
-```bash
-# script Node_IP Node_Port Miner_PubKey
-> ./miner.sh localhost 2999
-```
-
 
