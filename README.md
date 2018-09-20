@@ -1,12 +1,16 @@
 # blockchain tracking serial numbers
 
 WARNING:
-- hardcoded GO_PATH in scripts, which need be changed
-- need more robust input error checking
-- should have directories named "db" and "wallet" in the GO_PATH directory
+- Hardcoded GO_PATH in scripts. Change it before running.
 
-#Summary
-Coming soon
+#Setup
+From GO_PATH directory, run:
+```bash
+go get github.com/qihengchen/bcg/...
+go get github.com/boltdb/bolt/...
+go get -u golang.org/x/crypto/...
+go install github.com/qihengchen/bcg
+```
 
 # Server node script:
 ```bash
@@ -18,8 +22,10 @@ GET API on server:
 get(serialnumber, salt) -> txid, PubKeyFrom, PubKeyHash
 ```bash
 > curl --header "Content-Type: application/json" --request POST --data '{"serialnumber":"1234567890","salt":"salt"}' http://localhost:2000/get
-
-{"Txid":null,"PubKeyFrom":null,"PubKeyHash":"QGApgHsaRW1opYwlZ15NBm0UYSw="}
+#if found, return latest transaction id and hash(PubKey of serial number owner)
+{"Txid":"91f3c965d9f9c52d96f2c52549a97731a951e0e59895aeea0913af4621f60263","PubKeyHash":"23fc6fa8404aa90fdef53b34f705e1e3f350deae"}
+#if not found, return empty string
+{"Txid":"","PubKeyHash":""}
 ```
 
 

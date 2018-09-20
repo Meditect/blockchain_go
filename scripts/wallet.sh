@@ -10,6 +10,13 @@ cd $GO_PATH
 DB_FILE=db/blockchain_${NODE_ID}.db
 WALLET_FILE=wallet/wallet_${NODE_ID}.dat
 
+if [ ! -d ./db ]; then
+ 	mkdir db
+fi
+
+if [ ! -d ./wallet ]; then
+	mkdir wallet
+fi
 
 RUN=bin/bcg
 

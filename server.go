@@ -21,6 +21,7 @@ import (
 const protocol = "tcp"
 const nodeVersion = 1
 const commandLength = 12
+const mining_threshold = 2 //start mining after receiving 2 tx
 
 var nodeAddress string
 var miningAddress string
@@ -71,7 +72,6 @@ type getJSONReq struct {
 
 type getJSONResp struct {
 	Txid 		string
-	PubKeyFrom 	string
 	PubKeyHash 	string
 }
 
@@ -197,11 +197,17 @@ func launchHTTPListener(apiAddress string, bc *Blockchain) {
 		resp := getJSONResp{}
 
 		hash := HashSerialNumber(req.SerialNumber, req.Salt)
-		outputs := bc.FindSerialNumberHash(hash)
+		outputs, txIDs := bc.FindSerialNumberHash(hash)
 		if len(outputs) > 0 {
+			resp.Txid = fmt.Sprintf("%s", txIDs[0])
 			resp.PubKeyHash = fmt.Sprintf("%x", outputs[0].PubKeyHash)
-		}
-		
+		} 
+			//resp.PubKeyHash = fmt.Sprintf("%s", "nothing found")
+		/*
+		type getJSONResp struct {
+			Txid 		string
+			PubKeyHash 	string
+		}*/
 		respJson, err := json.Marshal(resp)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -239,25 +245,7 @@ func clientAddHandler(to string, serialNumber, salt string, bc *Blockchain, mine
 	fmt.Println("Success!")
 }
 
-func clientGetHandler(serialNumber, salt string, bc *Blockchain) {
-	UTXOSet := UTXOSet{bc}
-
-	hash := HashSerialNumber(serialNumber, salt)
-
-	outputs := UTXOSet.FindSerialNumberHash(hash)
-
-	if len(outputs) == 0 {
-		fmt.Printf("No transaction found\n\n")
-	}
-	
-	for _, output := range outputs {
-		fmt.Printf("============ Transaction ============\n")
-		fmt.Printf("Serial Number Hash: %d\n", output.SerialNumberHash)
-		fmt.Printf("Script (PubKey hash of recipient): %x\n", output.PubKeyHash)
-		fmt.Printf("\n")
-	}
-}
-
+// WARNING: the NewWallets line has volatile dependency
 func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchain, mineNow bool) {
 	if !ValidateAddress(from) {
 		log.Panic("ERROR: Sender address is not valid")
@@ -268,7 +256,7 @@ func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchai
 
 	UTXOSet := UTXOSet{bc}
 
-	wallets, err := NewWallets(ParseNodeID(nodeAddress))
+	wallets, err := NewWallets(ParseNodeID(nodeAddress)) //this line will crash if we change db and wallet file naming convention
 	if err != nil {
 		log.Panic(err)
 	}
@@ -291,6 +279,25 @@ func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchai
 	}
 
 	fmt.Println("Success!")
+}
+
+func clientGetHandler(serialNumber, salt string, bc *Blockchain) {
+	UTXOSet := UTXOSet{bc}
+
+	hash := HashSerialNumber(serialNumber, salt)
+
+	outputs, txIDs := UTXOSet.FindSerialNumberHash(hash)
+
+	if len(outputs) == 0 {
+		fmt.Printf("No transaction found\n\n")
+	}
+	
+	for index, output := range outputs {
+		fmt.Printf("============ Transaction %x ============\n", txIDs[index])
+		fmt.Printf("Serial Number Hash: %d\n", output.SerialNumberHash)
+		fmt.Printf("Script (PubKey hash of recipient): %x\n", output.PubKeyHash)
+		fmt.Printf("\n")
+	}
 }
 
 func clientPrintHandler(bc *Blockchain) {
@@ -572,14 +579,14 @@ func handleTx(request []byte, bc *Blockchain) {
 	tx := DeserializeTransaction(txData)
 	mempool[hex.EncodeToString(tx.ID)] = tx
 
-	if nodeAddress == knownNodes[0] {
+	if nodeAddress == knownNodes[0] { //if server node
 		for _, node := range knownNodes {
 			if node != nodeAddress && node != payload.AddFrom {
 				sendInv(node, "tx", [][]byte{tx.ID})
 			}
 		}
 	} else {
-		if len(mempool) >= 2 && len(miningAddress) > 0 {
+		if len(mempool) >= mining_threshold && len(miningAddress) > 0 {
 		MineTransactions:
 			var txs []*Transaction
 
@@ -596,8 +603,8 @@ func handleTx(request []byte, bc *Blockchain) {
 			}
 
 			//TODO: salt parameter
-			cbTx := NewSerialNumberTX(miningAddress, "", "")
-			txs = append(txs, cbTx)
+			//cbTx := NewSerialNumberTX(miningAddress, "", "")
+			//txs = append(txs, cbTx)
 
 			newBlock := bc.MineBlock(txs)
 			UTXOSet := UTXOSet{bc}

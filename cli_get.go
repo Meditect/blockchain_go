@@ -11,12 +11,12 @@ func (cli *CLI) getSerialNumber(serialNumber, salt string, nodeID string) {
 
 	hash := HashSerialNumber(serialNumber, salt)
 
-	outputs := UTXOSet.FindSerialNumberHash(hash)
+	outputs, txIDs := UTXOSet.FindSerialNumberHash(hash)
 	
-	for _, output := range outputs {
-		fmt.Printf("============ Tx %x ============\n")
+	for index, output := range outputs {
+		fmt.Printf("============ Transaction %x ============\n", txIDs[index])
 		fmt.Printf("Serial Number Hash: %d\n", output.SerialNumberHash)
-		fmt.Printf("Prev. block: %x\n", output.PubKeyHash)
+		fmt.Printf("Script (PubKey hash of recipient): %x\n", output.PubKeyHash)
 		fmt.Printf("\n")
 	}
 }

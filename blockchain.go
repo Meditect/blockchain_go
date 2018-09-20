@@ -159,20 +159,27 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	return Transaction{}, errors.New("Transaction is not found")
 }
 
-func (bc *Blockchain) FindSerialNumberHash(hash []byte) []TXOutput {
+// 
+func (bc *Blockchain) FindSerialNumberHash(hash []byte) ([]TXOutput, []string) {
 	var UTXOs []TXOutput
+	var txIDs []string
 	db := bc.db
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(utxoBucket))
-		c := b.Cursor()
+		bucket := tx.Bucket([]byte(utxoBucket))
+		cursor := bucket.Cursor()
 
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			outs := DeserializeOutputs(v)
+		for key, value := cursor.First(); key != nil; key, value = cursor.Next() {
+			outs := DeserializeOutputs(value)
+			txID := hex.EncodeToString(key)
 
 			for _, out := range outs.Outputs {
+				fmt.Println(out.SerialNumberHash)
+				fmt.Println(hash)
+				fmt.Println()
 				if bytes.Compare(out.SerialNumberHash, hash) == 0 {
 					UTXOs = append(UTXOs, out)
+					txIDs = append(txIDs, txID)
 				}
 			}
 		}
@@ -182,8 +189,9 @@ func (bc *Blockchain) FindSerialNumberHash(hash []byte) []TXOutput {
 	if err != nil {
 		log.Panic(err)
 	}
+	fmt.Println("\n")
 
-	return UTXOs
+	return UTXOs, txIDs
 }
 
 // FindUTXO finds all unspent transaction outputs and returns transactions with spent outputs removed
