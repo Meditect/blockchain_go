@@ -1,4 +1,4 @@
-blockchain tracking serial numbers
+# blockchain tracking serial numbers
 
 WARNING:
 - hardcoded GO_PATH in scripts, which need be changed
@@ -51,7 +51,9 @@ Send serial number 1234567890 with salt 1234 from 137kzApkdZDFyZZtWfqwZrx2i5UU1Q
 ```bash
 # get serialnumber salt
 > get 1234567890 1234
-
+============ Tx %!x(MISSING) ============
+Serial Number Hash: [194 96 9 245 130 251 24 78 86 1 20 118 194 251 161 97 55 41 215 83 82 87 19 68 150 47 201 41 182 225 82 177]
+Prev. block: 364b8284ddd8ca5caa3365326b80c8c6531fe866
 ```
 
 - print the blockchain

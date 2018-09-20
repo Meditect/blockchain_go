@@ -109,6 +109,7 @@ func StartServer(address string, minerAddress, apiAddress string) {
 	wg.Wait()
 }
 
+// CLI on client node. Need this because the bolt DB does not permit concurrent access
 func launchClientInterface(bc *Blockchain) {
 	buf := bufio.NewReader(os.Stdin)
 	for {
@@ -119,26 +120,38 @@ func launchClientInterface(bc *Blockchain) {
 			continue
 		}
 
-		mineNow = false
+		mineNow := false
 
 		line := strings.TrimSuffix(string(sentence), "\n")
 		args := strings.Split(line, " ")
 
 		//TODO: error checking
-		fmt.Printf("Received %s command\n", args[0])
+		//fmt.Printf("Received %s command\n", args[0])
 
 		switch args[0] {
 		case "add":
+			if len(args) != 4 {
+				fmt.Println("Usage: add to_addr data salt\n")
+				break
+			}
 			to := args[1]
 			data := args[2]
 			salt := args[3]
 			clientAddHandler(to, data, salt, bc, mineNow)
 			
 		case "get":
+			if len(args) != 3 {
+				fmt.Println("Usage: get data salt\n")
+				break
+			}
 			data := args[1]
 			salt := args[2]
 			clientGetHandler(data, salt, bc)
 		case "send":
+			if len(args) != 5 {
+				fmt.Println("Usage: send from_addr to_addr data salt\n")
+				break
+			}
 			from := args[1]
 			to := args[2]
 			data := args[3]
@@ -147,11 +160,14 @@ func launchClientInterface(bc *Blockchain) {
 		case "print":
 			clientPrintHandler(bc)
 		default:
-			fmt.Println("Unknown command!")
+			if args[0] != "" {
+				fmt.Println("Unknown command!")
+			}
 		}
 	}
 }
 
+// handle communication between nodes
 func launchTCPListener(nodeAddress string, bc *Blockchain) {
 	listener, err := net.Listen(protocol, nodeAddress)
 	if err != nil {
@@ -168,7 +184,7 @@ func launchTCPListener(nodeAddress string, bc *Blockchain) {
 	}
 }
 
-
+// handle API requests
 func launchHTTPListener(apiAddress string, bc *Blockchain) {
 	//serial number, salt -> txid, from pubkey, to pubkey hash
 	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +193,7 @@ func launchHTTPListener(apiAddress string, bc *Blockchain) {
 		if err != io.EOF && err != nil {
 			panic(err)
 		}
-		fmt.Println(req)
+		
 		resp := getJSONResp{}
 
 		hash := HashSerialNumber(req.SerialNumber, req.Salt)
@@ -185,11 +201,11 @@ func launchHTTPListener(apiAddress string, bc *Blockchain) {
 		if len(outputs) > 0 {
 			resp.PubKeyHash = fmt.Sprintf("%x", outputs[0].PubKeyHash)
 		}
-		fmt.Println(resp)
+		
 		respJson, err := json.Marshal(resp)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write(respJson)
+		w.Write(append(respJson, []byte{'\n'}...))
 	})
 
 	log.Fatal(http.ListenAndServe(apiAddress, nil))
@@ -229,11 +245,15 @@ func clientGetHandler(serialNumber, salt string, bc *Blockchain) {
 	hash := HashSerialNumber(serialNumber, salt)
 
 	outputs := UTXOSet.FindSerialNumberHash(hash)
+
+	if len(outputs) == 0 {
+		fmt.Printf("No transaction found\n\n")
+	}
 	
 	for _, output := range outputs {
-		fmt.Printf("============ Tx %x ============\n")
+		fmt.Printf("============ Transaction ============\n")
 		fmt.Printf("Serial Number Hash: %d\n", output.SerialNumberHash)
-		fmt.Printf("Prev. block: %x\n", output.PubKeyHash)
+		fmt.Printf("Script (PubKey hash of recipient): %x\n", output.PubKeyHash)
 		fmt.Printf("\n")
 	}
 }
@@ -259,8 +279,7 @@ func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchai
 	tx, err := NewUTXOTransaction(&wallet, to, serialNumber, salt, &UTXOSet)
 
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Panic(err)
 	}
 
 	if mineNow {
