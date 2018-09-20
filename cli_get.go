@@ -14,7 +14,8 @@ func (cli *CLI) getSerialNumber(serialNumber, salt string, nodeID string) {
 	outputs, txIDs := UTXOSet.FindSerialNumberHash(hash)
 	
 	for index, output := range outputs {
-		fmt.Printf("============ Transaction %x ============\n", txIDs[index])
+		fmt.Printf("============ Transaction ============\n")
+		fmt.Printf("txid: %x\n", txIDs[index])
 		fmt.Printf("Serial Number Hash: %d\n", output.SerialNumberHash)
 		fmt.Printf("Script (PubKey hash of recipient): %x\n", output.PubKeyHash)
 		fmt.Printf("\n")
