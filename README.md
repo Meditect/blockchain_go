@@ -17,15 +17,15 @@ go install github.com/qihengchen/bcg
 Scenario:
 1. Start "server" node. All clients can add and update. This node is server-like only in the sense that miners send new blocks to the server, and the server broadcasts to all clients. We can change it later, but for now, this is good.
 
-./server.sh localhost 3000 localhost 2000
+- ./server.sh localhost 3000 localhost 2000
 
 2. Start miner. Note that we configured the miner to start mining after receiving two tx. In a new window, type:
 
-./miner.sh localhost 2999
+- ./miner.sh localhost 2999
 
 3. Start client one and create two labels. In a new window, type:
 
-./client.sh localhost 3001
+- ./client.sh localhost 3001
 
 In the dummy CLI, type:
 - add [paste its address from stdout] 30013001 0   (30013001 is the serial number; 0 is a placeholder for the legacy 'salt' field)
@@ -33,7 +33,7 @@ In the dummy CLI, type:
 
 4. Start client two, create a label, and transfer an existing label. In a new window, type:
 
-./client.sh localhost 3002
+- ./client.sh localhost 3002
 
 In the dummy CLI, type:
 - add [paste its address from stdout] 30023002 0
@@ -43,7 +43,7 @@ Back to client one's window, type:
 
 5. Start client three, create a label, and transfer the '30013001' label again. In a new window, type:
 
-./client.sh localhost 3001
+- ./client.sh localhost 3001
 
 In the dummy CLI, type:
 - add [paste node three address from stdout] 30033003 0
