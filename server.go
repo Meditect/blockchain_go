@@ -16,6 +16,7 @@ import (
 	"os"
 	"strings"
 	"strconv"
+	"time"
 )
 
 const protocol = "tcp"
@@ -25,7 +26,7 @@ const mining_threshold = 2 //start mining after receiving 2 tx
 
 var nodeAddress string
 var miningAddress string
-var knownNodes = []string{"localhost:3000"} //knownNodes will be hardcoded 
+var knownNodes = []string{"localhost:3000"} // server node IP will be hard-coded
 var blocksInTransit = [][]byte{}
 var mempool = make(map[string]Transaction)
 
@@ -79,30 +80,39 @@ type getJSONResp struct {
 //{"Txid":"","PubKeyFrom":"","PubKeyHash":"406029807b1a456d68a58c25675e4d066d14612c"}
 
 /* 	client node: address, "", ""
-	miner node:	 address, "", apiAddress
-	server node: address, minerAddress, "" where address = minerAddress
+	server node: address, "", apiAddress
+	miner node: address, minerAddress, "" where address = minerAddress
 */
 
-func StartServer(address string, minerAddress, apiAddress string) {
-	nodeID := ParseNodeID(address)
-	nodeAddress = address
-	miningAddress = minerAddress
-	bc := NewBlockchain(nodeID)
+func StartServer(node_address string, miner_address string, api_address string) {
+	// set global variables
+	nodeAddress = node_address
+	miningAddress = miner_address
+
+	fmt.Printf("Starting node -> %s\n", nodeAddress)
+	if len(api_address) > 0 {
+		fmt.Printf("API IP:port -> %s\n", api_address)
+	}
+
+	bc := NewBlockchain(ParseNodeID(node_address)) //error checking
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go launchTCPListener(nodeAddress, bc) //node communication
+	go startNodeCommunication(node_address, bc)
 
-	// if server, launch API listener
-	if SliceContainsString(knownNodes, nodeAddress) {
+	// if tracker node, launch API listener
+	if knownNodes[0] == nodeAddress {
 		wg.Add(1)
-		go launchHTTPListener(apiAddress, bc)
+		go launchApiListener(api_address, bc)
 	} else {
-		//if not, check in with server node. Default to the first server
+		//if client or miner, check in with the tracker
 		sendVersion(knownNodes[0], bc) 
 	}
 
-	if minerAddress == "" && apiAddress == "" {
+	// if client
+	if miner_address == "" && api_address == "" {
+		wg.Add(1)
+		time.Sleep(500 * time.Millisecond)
 		launchClientInterface(bc)
 	}
 
@@ -120,8 +130,6 @@ func launchClientInterface(bc *Blockchain) {
 			continue
 		}
 
-		mineNow := false
-
 		line := strings.TrimSuffix(string(sentence), "\n")
 		args := strings.Split(line, " ")
 
@@ -131,17 +139,17 @@ func launchClientInterface(bc *Blockchain) {
 		switch args[0] {
 		case "add":
 			if len(args) != 4 {
-				fmt.Println("Usage: add to_addr data salt\n")
+				fmt.Println("Usage: add [recipient addr] [data] [salt]\n")
 				break
 			}
 			to := args[1]
 			data := args[2]
 			salt := args[3]
-			clientAddHandler(to, data, salt, bc, mineNow)
+			clientAddHandler(to, data, salt, bc)
 			
 		case "get":
 			if len(args) != 3 {
-				fmt.Println("Usage: get data salt\n")
+				fmt.Println("Usage: get [data] [salt]\n")
 				break
 			}
 			data := args[1]
@@ -149,14 +157,14 @@ func launchClientInterface(bc *Blockchain) {
 			clientGetHandler(data, salt, bc)
 		case "send":
 			if len(args) != 5 {
-				fmt.Println("Usage: send from_addr to_addr data salt\n")
+				fmt.Println("Usage: send [sender addr] [recipient addr] [data] [salt]\n")
 				break
 			}
 			from := args[1]
 			to := args[2]
 			data := args[3]
 			salt := args[4]
-			clientSendHandler(from, to, data, salt, bc, mineNow)
+			clientSendHandler(from, to, data, salt, bc)
 		case "print":
 			clientPrintHandler(bc)
 		default:
@@ -167,25 +175,8 @@ func launchClientInterface(bc *Blockchain) {
 	}
 }
 
-// handle communication between nodes
-func launchTCPListener(nodeAddress string, bc *Blockchain) {
-	listener, err := net.Listen(protocol, nodeAddress)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer listener.Close()
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Panic(err)
-		}
-		go handleConnection(conn, bc)
-	}
-}
-
 // handle API requests
-func launchHTTPListener(apiAddress string, bc *Blockchain) {
+func launchApiListener(apiAddress string, bc *Blockchain) {
 	//serial number, salt -> txid, from pubkey, to pubkey hash
 	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
 		req := getJSONReq{}
@@ -226,39 +217,36 @@ func launchHTTPListener(apiAddress string, bc *Blockchain) {
 	log.Fatal(s.ListenAndServe())*/
 }
 
-func clientAddHandler(to string, serialNumber, salt string, bc *Blockchain, mineNow bool) {
+func clientAddHandler(to string, serialNumber, salt string, bc *Blockchain) {
 	if !ValidateAddress(to) {
-		log.Panic("ERROR: Recipient address is not valid")
+		log.Println("Error: Recipient address is not valid")
+		return
 	}
 
 	tx := NewSerialNumberTX(to, serialNumber, salt)
 
-	if mineNow {
-		UTXOSet := UTXOSet{bc}
-		txs := []*Transaction{tx}
-		newBlock := bc.MineBlock(txs)
-		UTXOSet.Update(newBlock)
-	} else {
-		sendTx(knownNodes[0], tx)
-	}
+	sendTx(knownNodes[0], tx) // alternatively, could broadcast to all known nodes.
 
 	fmt.Println("Success!")
 }
 
 // WARNING: the NewWallets line has volatile dependency
-func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchain, mineNow bool) {
+func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchain) {
 	if !ValidateAddress(from) {
-		log.Panic("ERROR: Sender address is not valid")
+		fmt.Errorf("Error: Sender address is not valid\n")
+		return
 	}
 	if !ValidateAddress(to) {
-		log.Panic("ERROR: Recipient address is not valid")
+		fmt.Errorf("Error: Recipient address is not valid\n")
+		return
 	}
 
 	UTXOSet := UTXOSet{bc}
 
 	wallets, err := NewWallets(ParseNodeID(nodeAddress)) //this line will crash if we change db and wallet file naming convention
 	if err != nil {
-		log.Panic(err)
+		fmt.Errorf("Error: %s\n", err)
+		return
 	}
 
 	wallet := wallets.GetWallet(from)
@@ -267,16 +255,11 @@ func clientSendHandler(from, to string, serialNumber, salt string, bc *Blockchai
 	tx, err := NewUTXOTransaction(&wallet, to, serialNumber, salt, &UTXOSet)
 
 	if err != nil {
-		log.Panic(err)
+		fmt.Errorf("Error: %s\n", err)
+		return
 	}
 
-	if mineNow {
-		txs := []*Transaction{tx}
-		newBlock := bc.MineBlock(txs)
-		UTXOSet.Update(newBlock)
-	} else {
-		sendTx(knownNodes[0], tx)
-	}
+	sendTx(knownNodes[0], tx)
 
 	fmt.Println("Success!")
 }
@@ -302,6 +285,8 @@ func clientGetHandler(serialNumber, salt string, bc *Blockchain) {
 }
 
 func clientPrintHandler(bc *Blockchain) {
+	debug()
+
 	bci := bc.Iterator()
 
 	for {
@@ -320,6 +305,30 @@ func clientPrintHandler(bc *Blockchain) {
 		if len(block.PrevBlockHash) == 0 {
 			break
 		}
+	}
+}
+
+func debug() {
+	fmt.Printf("%v\n", knownNodes)
+}
+
+
+// ==================================
+// ========== Node Network ==========
+// ==================================
+func startNodeCommunication(nodeAddress string, bc *Blockchain) {
+	listener, err := net.Listen(protocol, nodeAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer listener.Close()
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println("Error: %s", err)
+		}
+		go handleConnection(conn, bc)
 	}
 }
 
@@ -379,12 +388,12 @@ func sendData(addr string, data []byte) {
 		fmt.Printf("%s is not available\n", addr)
 		var updatedNodes []string
 
+		//remove the unavailable node
 		for _, node := range knownNodes {
 			if node != addr {
 				updatedNodes = append(updatedNodes, node)
 			}
 		}
-
 		knownNodes = updatedNodes
 
 		return
@@ -430,9 +439,7 @@ func sendTx(addr string, tnx *Transaction) {
 func sendVersion(addr string, bc *Blockchain) {
 	bestHeight := bc.GetBestHeight()
 	payload := gobEncode(verzion{nodeVersion, bestHeight, nodeAddress})
-
 	request := append(commandToBytes("version"), payload...)
-
 	sendData(addr, request)
 }
 
@@ -447,9 +454,10 @@ func handleAddr(request []byte) {
 		log.Panic(err)
 	}
 
-	knownNodes = append(knownNodes, payload.AddrList...)
-	fmt.Printf("There are %d known nodes now!\n", len(knownNodes))
-	requestBlocks()
+	knownNodes = addNewNodes(knownNodes, payload.AddrList)
+	fmt.Printf("There are %d known nodes now:\n", len(knownNodes))
+	debug()	
+	//requestBlocks()
 }
 
 // TODO: validate blocks
@@ -467,8 +475,16 @@ func handleBlock(request []byte, bc *Blockchain) {
 	blockData := payload.Block
 	block := DeserializeBlock(blockData)
 
-	fmt.Println("Recevied a new block!")
 	bc.AddBlock(block)
+
+	//if server node, broadcast new block to other nodes 
+	if nodeAddress == knownNodes[0] {
+		for _, node := range knownNodes {
+			if node != nodeAddress { //&& node != payload.AddrFrom {
+				sendInv(node, "block", [][]byte{block.Hash})
+			}
+		}
+	}
 
 	fmt.Printf("Added block %x\n", block.Hash)
 
@@ -476,7 +492,13 @@ func handleBlock(request []byte, bc *Blockchain) {
 		blockHash := blocksInTransit[0]
 		sendGetData(payload.AddrFrom, "block", blockHash)
 
-		blocksInTransit = blocksInTransit[1:]
+		newInTransit := [][]byte{}
+		for _, b := range blocksInTransit {
+			if bytes.Compare(b, blockHash) != 0 {
+				newInTransit = append(newInTransit, b)
+			}
+		}
+		blocksInTransit = newInTransit
 	} else {
 		UTXOSet := UTXOSet{bc}
 		UTXOSet.Reindex()
@@ -494,14 +516,15 @@ func handleInv(request []byte, bc *Blockchain) {
 		log.Panic(err)
 	}
 
-	fmt.Printf("Recevied inventory with %d %s\n", len(payload.Items), payload.Type)
+	fmt.Printf("Recevied inventory with %d %s from %s\n", len(payload.Items), payload.Type, payload.AddrFrom)
 
 	if payload.Type == "block" {
 		blocksInTransit = payload.Items
 
-		blockHash := payload.Items[0]
+		// TODO: select randomly from knownNodes, instead of the server node
+		blockHash := payload.Items[0] //tip block hash
 		sendGetData(payload.AddrFrom, "block", blockHash)
-
+		
 		newInTransit := [][]byte{}
 		for _, b := range blocksInTransit {
 			if bytes.Compare(b, blockHash) != 0 {
@@ -580,7 +603,7 @@ func handleTx(request []byte, bc *Blockchain) {
 	tx := DeserializeTransaction(txData)
 	mempool[hex.EncodeToString(tx.ID)] = tx
 
-	if nodeAddress == knownNodes[0] { //if server node
+	if nodeAddress == knownNodes[0] { //if server node, broadcast tx to all knownNodes
 		for _, node := range knownNodes {
 			if node != nodeAddress && node != payload.AddFrom {
 				sendInv(node, "tx", [][]byte{tx.ID})
@@ -603,10 +626,6 @@ func handleTx(request []byte, bc *Blockchain) {
 				return
 			}
 
-			//TODO: salt parameter
-			//cbTx := NewSerialNumberTX(miningAddress, "", "")
-			//txs = append(txs, cbTx)
-
 			newBlock := bc.MineBlock(txs)
 			UTXOSet := UTXOSet{bc}
 			UTXOSet.Reindex()
@@ -618,7 +637,7 @@ func handleTx(request []byte, bc *Blockchain) {
 				delete(mempool, txID)
 			}
 
-			for _, node := range knownNodes {
+			for _, node := range knownNodes { // broadcast new block to nodes
 				if node != nodeAddress {
 					sendInv(node, "block", [][]byte{newBlock.Hash})
 				}
@@ -645,17 +664,18 @@ func handleVersion(request []byte, bc *Blockchain) {
 	myBestHeight := bc.GetBestHeight()
 	foreignerBestHeight := payload.BestHeight
 
-	if myBestHeight < foreignerBestHeight {
+	if myBestHeight < foreignerBestHeight { //if behind, get new blocks
 		sendGetBlocks(payload.AddrFrom)
-	} else if myBestHeight > foreignerBestHeight {
+	} else if myBestHeight > foreignerBestHeight { //if ahead, send version
 		sendVersion(payload.AddrFrom, bc)
 	}
 
-	// sendAddr(payload.AddrFrom)
+	sendAddr(payload.AddrFrom)
 	if !nodeIsKnown(payload.AddrFrom) {
 		knownNodes = append(knownNodes, payload.AddrFrom)
 	}
 }
+
 
 func handleConnection(conn net.Conn, bc *Blockchain) {
 
@@ -667,7 +687,7 @@ func handleConnection(conn net.Conn, bc *Blockchain) {
 	}
 
 	command := bytesToCommand(request[:commandLength])
-	fmt.Printf("Received %s command\n", command)
+	//fmt.Printf("Received %s command\n", command)
 
 	switch command {
 	case "addr":
@@ -690,6 +710,10 @@ func handleConnection(conn net.Conn, bc *Blockchain) {
 	conn.Close()
 }
 
+
+// ======================================
+// ========== Helper Functions ==========
+// ======================================
 func gobEncode(data interface{}) []byte {
 	var buff bytes.Buffer
 
@@ -711,3 +735,17 @@ func nodeIsKnown(addr string) bool {
 
 	return false
 }
+
+// O(n) in practice, since len(newNodes) usually is one.
+func addNewNodes(nodes, newNodes []string) []string {
+	for _, nodeAddr := range newNodes {
+		if !nodeIsKnown(nodeAddr) {
+			nodes = append(nodes, nodeAddr)
+		}
+	}
+	return nodes
+}
+
+
+
+

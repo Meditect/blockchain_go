@@ -22,7 +22,7 @@ fi
 RUN=bin/bcg
 
 if ! [ -e $DB_FILE ]; then
-	echo "Init server db for new node"
+	echo "Creating server node:"
 	addr=$($RUN createwallet)
 	addr=${addr#Your new address: } #changing fmt.Printf string in source code will break this line
 	$RUN createblockchain -address $addr
