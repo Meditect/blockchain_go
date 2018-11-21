@@ -21,7 +21,7 @@ func Float64ToByte(float float64) []byte {
 func ParseNodeID(nodeAddress string) string {
 	a := strings.Split(nodeAddress, ":")
 	if len(a) != 2 {
-		log.Panic("Invalid nodeAddr %s", nodeAddress)
+		log.Panic("Invalid node address")
 	}
 	return a[1]
 }

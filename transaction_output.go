@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 	"encoding/gob"
 	"crypto/sha256"
 	"log"
@@ -10,6 +12,16 @@ import (
 type TXOutput struct {
 	SerialNumberHash	[]byte  // hash(serial number + salt)
 	PubKeyHash  		[]byte  // derived from address, so it has to be hash(pubKey) of the recipient, not pubKey.
+}
+
+func (out TXOutput) String() string {
+	var lines []string
+
+	lines = append(lines, fmt.Sprintf(" === Output ==="))
+	lines = append(lines, fmt.Sprintf("       Serial Number Hash:  %x", out.SerialNumberHash))
+	lines = append(lines, fmt.Sprintf("       Script: %x", out.PubKeyHash))
+
+	return strings.Join(lines, "\n")
 }
 
 // Lock signs the output
@@ -34,10 +46,10 @@ func (out *TXOutput) UpdateSerialNumberHash(serialNumber, salt string) {
 }
 
 // NewTXOutput create a new TXOutput
-func NewTXOutput(serialNumber, address string, salt string) *TXOutput {
+func NewTXOutput(serialNumber, recipient_addr string, salt string) *TXOutput {
 	txo := &TXOutput{}
 	txo.UpdateSerialNumberHash(serialNumber, salt)
-	txo.Lock([]byte(address))
+	txo.Lock([]byte(recipient_addr))
 
 	return txo
 }

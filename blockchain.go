@@ -122,7 +122,6 @@ func (bc *Blockchain) AddBlock(block *Block) {
 		lastBlockData := b.Get(lastHash)
 		lastBlock := DeserializeBlock(lastBlockData)
 
-		// possible that we missed blocks between block and lastBlock?
 		if block.Height > lastBlock.Height {
 			err = b.Put([]byte("l"), block.Hash)
 			if err != nil {
@@ -159,7 +158,7 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	return Transaction{}, errors.New("Transaction is not found")
 }
 
-// 
+
 func (bc *Blockchain) FindSerialNumberHash(hash []byte) ([]TXOutput, []string) {
 	var UTXOs []TXOutput
 	var txIDs []string
@@ -174,9 +173,6 @@ func (bc *Blockchain) FindSerialNumberHash(hash []byte) ([]TXOutput, []string) {
 			txID := hex.EncodeToString(key)
 
 			for _, out := range outs.Outputs {
-				fmt.Println(out.SerialNumberHash)
-				fmt.Println(hash)
-				fmt.Println()
 				if bytes.Compare(out.SerialNumberHash, hash) == 0 {
 					UTXOs = append(UTXOs, out)
 					txIDs = append(txIDs, txID)
@@ -189,7 +185,6 @@ func (bc *Blockchain) FindSerialNumberHash(hash []byte) ([]TXOutput, []string) {
 	if err != nil {
 		log.Panic(err)
 	}
-	fmt.Println("\n")
 
 	return UTXOs, txIDs
 }
@@ -240,9 +235,7 @@ func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
 
 // Iterator returns a BlockchainIterat
 func (bc *Blockchain) Iterator() *BlockchainIterator {
-	bci := &BlockchainIterator{bc.tip, bc.db}
-
-	return bci
+	return &BlockchainIterator{bc.tip, bc.db}
 }
 
 // GetBestHeight returns the height of the latest block
@@ -335,6 +328,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 
 	newBlock := NewBlock(transactions, lastHash, lastHeight+1)
 
+	
 	err = bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		err := b.Put(newBlock.Hash, newBlock.Serialize())
@@ -356,6 +350,12 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 	}
 
 	return newBlock
+}
+
+//TODO
+func (bc *Blockchain) ValidateBlock(block *Block) bool {
+	
+	return true
 }
 
 // SignTransaction signs inputs of a Transaction

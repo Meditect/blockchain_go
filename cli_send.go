@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
-	"log"
 )
 
 func (cli *CLI) send(from string, to, serialNumber string, salt, nodeID string, mineNow bool) {
 	if !ValidateAddress(from) {
-		log.Panic("ERROR: Sender address is not valid")
+		fmt.Errorf("Error: Sender address is not valid\n")
+		return
 	}
 	if !ValidateAddress(to) {
-		log.Panic("ERROR: Recipient address is not valid")
+		fmt.Errorf("Error: Recipient address is not valid\n")
+		return
 	}
 
 	bc := NewBlockchain(nodeID)
@@ -19,13 +20,18 @@ func (cli *CLI) send(from string, to, serialNumber string, salt, nodeID string, 
 
 	wallets, err := NewWallets(nodeID)
 	if err != nil {
-		log.Panic(err)
+		fmt.Errorf("Error: %s\n", err)
+		return
 	}
 
 	wallet := wallets.GetWallet(from)
+	if wallet == nil {
+		fmt.Errorf("You do not own the address: %s", from)
+		return
+	}
 
 	// later may be modified to transfer labels in patch
-	tx, err := NewUTXOTransaction(&wallet, to, serialNumber, salt, &UTXOSet)
+	tx, err := NewUTXOTransaction(wallet, to, serialNumber, salt, &UTXOSet)
 
 	if err != nil {
 		fmt.Println(err)

@@ -1,9 +1,8 @@
 # blockchain tracking serial numbers
 
-WARNING:
+Setup: 
 - Hardcoded GO_PATH in scripts. Change it before running.
-
-Setup: in GO_PATH directory, run:
+- In GO_PATH directory, run:
 ```bash
 go get github.com/qihengchen/blockchain_go/...
 go get github.com/boltdb/bolt/...
@@ -13,13 +12,12 @@ mv src/github.com/qihengchen/blockchain_go src/github.com/qihengchen/bcg
 go install github.com/qihengchen/bcg
 ```
 
-
 Scenario:
-1. Start "server" node. All clients can add and update. This node is server-like only in the sense that miners send new blocks to the server, and the server broadcasts to all clients. We can change it later, but for now, this is good.
+1. Start "server/tracker" node. All clients can add and update. This node is server-like only in the sense that it takes new blocks from miners and broadcasts them to client nodes. It is still the fastest miner winning. We could make the concensus mechanism fully decentralized later, but for now, this is good.
 
 - ./server.sh localhost 3000 localhost 2000
 
-2. Start miner. Note that we configured the miner to start mining after receiving two tx. In a new window, type:
+2. Start miner. We configured the miner to start mining after receiving two tx. In a new window, type:
 
 - ./miner.sh localhost 2999
 
@@ -28,26 +26,31 @@ Scenario:
 - ./client.sh localhost 3001
 
 In the dummy CLI, type:
-- add [paste its address from stdout] 30013001 0   (30013001 is the serial number; 0 is a placeholder for the legacy 'salt' field)
-- add [paste its address from stdout] 300130013001 0
+- add [paste node address from stdout] 3001 0   (3001 is the serial number; 0 is a placeholder for the legacy 'salt' field. We may use this field to add privacy, but let's keep the placeholder now)
+- add [paste node address from stdout] 30013001 0
 
 4. Start client two, create a label, and transfer an existing label. In a new window, type:
 
 - ./client.sh localhost 3002
 
 In the dummy CLI, type:
-- add [paste its address from stdout] 30023002 0
+- add [paste node address from stdout] 3002 0
 
 Back to client one's window, type:
-- send [node one addr] [node two addr] 30013001 0  (transferring '30013001' from node one to node two)
+- send [node one addr] [node two addr] 30013001 0  (transfer '30013001' from node one to node two)
 
 5. Start client three, create a label, and transfer the '30013001' label again. In a new window, type:
 
-- ./client.sh localhost 3001
+- ./client.sh localhost 3003
 
 In the dummy CLI, type:
-- add [paste node three address from stdout] 30033003 0
-- send [node two addr] [node three addr] 30013001 0  (the '30013001' is transferred again to node three, after being transfer from node one to node two)
+- add [paste node address from stdout] 3003 0
+- send [node two addr] [node three addr] 30013001 0  (transfer '30013001' from node two to node three)
+
+
+Other things to try in the dummy CLI:
+- get 30013001 0  (get [serial number] [salt])
+- print
 
 
 
@@ -55,7 +58,11 @@ In the dummy CLI, type:
 
 
 
-========= IGNORE ==========
+
+
+
+
+========= IGNORE BELOW ==========
 # Server node script:
 ```bash
 # script Node_IP Node_Port API_IP API_Port
@@ -121,6 +128,8 @@ Script (PubKey hash of recipient): 5b7a1be33dcba30823e3fe51778ba274cadb7dd5
 > print
 ```
 
+TODO:
+- Now(miner --new block--> tracker --> clients) -> Later(miner --new block--> all nodes, using merkle tree)
 
 
 

@@ -22,11 +22,11 @@ fi
 RUN=bin/bcg
 
 if ! [ -e $DB_FILE ]; then
-	echo "Creating server node:"
 	addr=$($RUN createwallet)
 	addr=${addr#Your new address: } #changing fmt.Printf string in source code will break this line
 	$RUN createblockchain -address $addr
 	cp $DB_FILE db/genesis_block.db
+	echo "Created server node"
 fi
 
 echo "Server Address: " $($RUN listaddresses)
