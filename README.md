@@ -56,13 +56,7 @@ In the dummy CLI, type:
 
 
 
-
-
-
-
-
-
-
+<br/><br/><br/><br/><br/><br/><br/>
 
 ========= IGNORE BELOW ==========
 
