@@ -11,7 +11,7 @@ import (
 
 type TXOutput struct {
 	SerialNumberHash	[]byte  // hash(serial number + salt)
-	PubKeyHash  		[]byte  // derived from address. It is hash(pubKey) of the recipient, not pubKey.
+	PubKeyHash  		[]byte  // hash(pubKey) of the recipient
 }
 
 func (out TXOutput) String() string {

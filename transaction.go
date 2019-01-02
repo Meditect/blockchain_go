@@ -17,9 +17,9 @@ import (
 
 // Transaction represents a Bitcoin transaction
 type Transaction struct {
-	ID   []byte
-	Vin  []TXInput
-	Vout []TXOutput
+	ID   []byte      // Txid
+	Vin  []TXInput   // list of inputs
+	Vout []TXOutput  // list of outputs
 }
 
 func (tx Transaction) IsNewSerialNumberTX() bool {

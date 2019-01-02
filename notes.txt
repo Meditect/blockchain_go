@@ -1,6 +1,3 @@
-package main
-
-import "bytes"
 
 type TXInput struct {
 	Txid      []byte  // Txid = Transaction{nil, inputs, outputs}.Hash()
@@ -9,9 +6,15 @@ type TXInput struct {
 	PubKey    []byte  // public key associated with the signature
 }
 
-// UsesKey checks whether the address initiated the transaction
-func (in *TXInput) UsesKey(pubKeyHash []byte) bool {
-	lockingHash := HashPubKey(in.PubKey)
 
-	return bytes.Compare(lockingHash, pubKeyHash) == 0
+type TXOutput struct {
+	SerialNumberHash	[]byte  // hash(serial number + salt)
+	PubKeyHash  		[]byte  // hash(pubKey) of the recipient
+}
+
+
+type Transaction struct {
+	ID   []byte      // Txid
+	Vin  []TXInput   // list of inputs
+	Vout []TXOutput  // list of outputs
 }
