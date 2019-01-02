@@ -1,5 +1,8 @@
 # blockchain tracking serial numbers
 
+# Intro:
+This blockchain application was forked from https://github.com/Jeiwan/blockchain_go, a simplified implementation of the Bitcoin Core protocol, to suit our specific need of transferring serial numbers. We made considerable code change and fixed a few bugs in the original source code.
+
 # Setup: 
 - Hardcoded GO_PATH in scripts. Change it before running.
 - In GO_PATH directory, run:
