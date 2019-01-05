@@ -7,13 +7,8 @@ This blockchain application was forked from https://github.com/Jeiwan/blockchain
 - Hardcoded GO_PATH in scripts. Change it before running.
 - In GO_PATH directory, run:
 ```bash
-go get github.com/qihengchen/blockchain_go/...
-go get github.com/boltdb/bolt/...
-go get github.com/fatih/color/...
-go get -u golang.org/x/crypto/...
-# used 'bcg' in scripts, so renaming the directory
-mv src/github.com/qihengchen/blockchain_go src/github.com/qihengchen/bcg
-go install github.com/qihengchen/bcg
+make setup
+make build
 ```
 
 # Scenario:
