@@ -22,7 +22,7 @@ We configured the miner to start mining after receiving two tx. In a new window,
 
 - ./miner.sh localhost 2999
 
-### 3. Start client one and create two labels. In a new window, type:
+### 3. Start client one and create two serial numbers. In a new window, type:
 
 - ./wallet.sh localhost 3001
 
@@ -30,7 +30,7 @@ In the dummy CLI, type:
 - add [paste node address from stdout] 3001 0   (3001 is the serial number; 0 is a placeholder for the legacy 'salt' field. We may use this field to add privacy, but let's keep the placeholder now)
 - add [paste node address from stdout] 30013001 0
 
-### 4. Start client two, create a label, and transfer an existing label. In a new window, type:
+### 4. Start client two, create a serial number, and transfer an existing serial number. In a new window, type:
 
 - ./wallet.sh localhost 3002
 
@@ -40,7 +40,7 @@ In the dummy CLI, type:
 Back to client one's window, type:
 - send [node one addr] [node two addr] 30013001 0  (transfer '30013001' from node one to node two)
 
-### 5. Start client three, create a label, and transfer the '30013001' label again. In a new window, type:
+### 5. Start client three, create a serial number, and transfer the '30013001' serial number again. In a new window, type:
 
 - ./wallet.sh localhost 3003
 
