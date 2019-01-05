@@ -2,7 +2,6 @@
 
 # script Node_IP Node_Port Miner_PubKey
 # ./miner.sh localhost 2999 xxxxxxxxx
-export GO_PATH=/Users/qiheng/Documents/blockchain_go
 export NODE_ADDR=$1:$2
 export NODE_ID=$2
 

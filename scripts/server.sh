@@ -2,7 +2,6 @@
 
 # script Node_IP Node_Port API_IP API_Port
 # ./server.sh localhost 3000 localhost 2000
-export GO_PATH=/Users/qiheng/Documents/blockchain_go/
 export NODE_ADDR=$1:$2
 export NODE_ID=$2
 export API_ADDR=$3:$4
