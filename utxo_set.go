@@ -142,7 +142,7 @@ func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
 	return UTXOs
 }
 
-func (u UTXOSet) FindSerialNumberHash(hash []byte) ([]TXOutput, []string) {
+/*func (u UTXOSet) FindSerialNumberHash(hash []byte) ([]TXOutput, []string) {
 	var UTXOs []TXOutput
 	var txIDs []string
 	db := u.Blockchain.db
@@ -170,7 +170,7 @@ func (u UTXOSet) FindSerialNumberHash(hash []byte) ([]TXOutput, []string) {
 	}
 
 	return UTXOs, txIDs
-}
+}*/
 
 // CountTransactions returns the number of transactions in the UTXO set
 func (u UTXOSet) CountTransactions() int {

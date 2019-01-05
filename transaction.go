@@ -15,27 +15,21 @@ import (
 	"log"
 )
 
-//const coinbaseInputData = "coinbase"
-
 // Transaction represents a Bitcoin transaction
 type Transaction struct {
-	ID   []byte
-	Vin  []TXInput
-	Vout []TXOutput
+	ID   []byte      // Txid
+	Vin  []TXInput   // list of inputs
+	Vout []TXOutput  // list of outputs
 }
 
-// IsCoinbase checks whether the transaction is coinbase
-// generating serial number per transaction
-// later make it generate in patches?
 func (tx Transaction) IsNewSerialNumberTX() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-// TODO: who can generate new serial number?
-func NewSerialNumberTX(to, serialNumber string, salt string) *Transaction {
+func NewSerialNumberTX(recipient_addr, serialNumber string, salt string) *Transaction {
 	// func NewTXOutput(serialNumber string, address string, salt string) *TXOutput
-	txout := *NewTXOutput(serialNumber, to, salt)
+	txout := *NewTXOutput(serialNumber, recipient_addr, salt)
 	txin := TXInput{[]byte{}, -1, nil, []byte(txout.SerialNumberHash)}
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{txout}}
 	tx.ID = tx.Hash()
@@ -228,7 +222,7 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 func (tx Transaction) String() string {
 	var lines []string
 
-	lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
+	lines = append(lines, fmt.Sprintf("--- Transaction %x ---", tx.ID))
 
 	for i, input := range tx.Vin {
 
@@ -239,9 +233,13 @@ func (tx Transaction) String() string {
 		lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
 	}
 
+	//type TXOutput struct {
+	//	SerialNumberHash	[]byte  // hash(serial number + salt)
+	//	PubKeyHash  		[]byte  // hash(pubKey) of the recipient, not pubKey.
+	//}
 	for i, output := range tx.Vout {
 		lines = append(lines, fmt.Sprintf("     Output %d:", i))
-		lines = append(lines, fmt.Sprintf("       Data:  %d", output.SerialNumberHash))
+		lines = append(lines, fmt.Sprintf("       Serial Number Hash:  %x", output.SerialNumberHash))
 		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
 	}
 

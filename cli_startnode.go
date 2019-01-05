@@ -6,7 +6,6 @@ import (
 )
 
 func (cli *CLI) startNode(nodeAddress string, minerAddress, apiAddress string) {
-	fmt.Printf("Starting node %s\n", nodeAddress)
 	
 	if len(minerAddress) > 0 {
 		if ValidateAddress(minerAddress) {

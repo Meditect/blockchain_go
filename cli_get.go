@@ -6,12 +6,11 @@ import (
 
 func (cli *CLI) getSerialNumber(serialNumber, salt string, nodeID string) {
 	bc := NewBlockchain(nodeID)
-	UTXOSet := UTXOSet{bc}
 	defer bc.db.Close()
 
 	hash := HashSerialNumber(serialNumber, salt)
 
-	outputs, txIDs := UTXOSet.FindSerialNumberHash(hash)
+	outputs, txIDs := bc.FindSerialNumberHash(hash)
 	
 	for index, output := range outputs {
 		fmt.Printf("============ Transaction ============\n")

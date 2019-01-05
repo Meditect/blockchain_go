@@ -21,7 +21,7 @@ type ProofOfWork struct {
 }
 
 // NewProofOfWork builds and returns a ProofOfWork
-func NewProofOfWork(b *Block) *ProofOfWork {
+func NewProofOfWork(b *Block) *ProofOfWork {	
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
 
@@ -51,13 +51,15 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	var hash [32]byte
 	nonce := 0
 
-	fmt.Printf("Mining a new block")
+	fmt.Println("Mining a new block")
+
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
 
 		hash = sha256.Sum256(data)
 		if math.Remainder(float64(nonce), 100000) == 0 {
-			fmt.Printf("\r%x", hash)
+			fmt.Printf("PoW hash: %x\n", hash)
+			//fmt.Printf("\r%x", hash)
 		}
 		hashInt.SetBytes(hash[:])
 
@@ -67,7 +69,7 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 			nonce++
 		}
 	}
-	fmt.Print("\n\n")
+	fmt.Print("\n")
 
 	return nonce, hash[:]
 }
