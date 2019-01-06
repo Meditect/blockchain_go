@@ -5,7 +5,7 @@
 export NODE_ADDR=$1:$2
 export NODE_ID=$2
 
-cd $GO_PATH
+cd $GOPATH/src/blockchain_go
 DB_FILE=db/blockchain_${NODE_ID}.db
 WALLET_FILE=wallet/wallet_${NODE_ID}.dat
 

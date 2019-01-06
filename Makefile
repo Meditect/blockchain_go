@@ -4,7 +4,7 @@ build:
 	go build -o ./bin/bcg *.go
 
 clean: 
-	rm -rf ./bin
+	rm -rf ./bin/bcg
 
 setup: 
 	go get
@@ -14,7 +14,8 @@ setup:
 	go get github.com/fatih/color/...
 	go get -u golang.org/x/crypto/...
 	# used 'bcg' in scripts, so renaming the directory
-	mv ../github.com/qihengchen/blockchain_go ../github.com/qihengchen/bcg 	
+	cp -r  ../github.com/qihengchen/blockchain_go ../github.com/qihengchen/bcg
+	rm -R ../github.com/qihengchen/blockchain_go
 	go install github.com/qihengchen/bcg
 
 test: 
